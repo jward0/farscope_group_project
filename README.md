@@ -10,7 +10,8 @@
 
 # Making changes 
 
-1. Create a new local branch to make related changes 
-2. Push local branch to remote 
-3. When work on the branch is complete, open a pull request to merge the remote branch with main, which I (James) will review before merging 
-4. Don't try to commit directly to remote main (it won't work) 
+1. Send me your GitHub username so I can add you as a collaborator (means you can directly push to branches rather than everyone having to fork the repo)
+2. Create a new local branch to make related changes 
+3. Push local branch to remote 
+4. When work on the branch is complete, open a pull request to merge the remote branch with main, which I (James) will review before merging 
+5. Don't try to commit directly to remote main (it won't work) 
