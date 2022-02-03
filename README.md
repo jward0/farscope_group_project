@@ -1,5 +1,5 @@
 # farscope_group_project
-2022 cohort FARSCOPE group project
+2021 cohort FARSCOPE group project
 
 # Environment setup 
 
