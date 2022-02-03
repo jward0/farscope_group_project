@@ -8,7 +8,7 @@
 3. Generate a [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for your GitHub account and [enter it to your local git install in Ubuntu](https://docs.github.com/en/get-started/getting-started-with-git/caching-your-github-credentials-in-git) 
 4. Clone the Git repo from here into your home directory (clone from ~)
 5. Navigate to the ```~/farscope_group_project``` and run the following to install the UR drivers:
-      ```chmod +x fs_setup && source fs_setup```
+      ```chmod +x fs_setup && source fs_setup```. If a CMake error for moveit_\*.cmake appears, ignore it.
 
 # Making changes 
 
