@@ -9,6 +9,7 @@
 4. Clone the Git repo from here into your home directory (clone from ~)
 5. Navigate to the ```~/farscope_group_project``` and run the following to install the UR drivers:
       ```chmod +x fs_setup && source fs_setup```. If a CMake error for moveit_\*.cmake appears, ignore it.
+6. If you installed VcXsrv (and have the correct IP address set in .bashrc) you can check that everything installed correctly by running ```roslaunch ur_gazebo ur10_joint_limited.launch```, which should start a gazebo simulation of the arm.
 
 # Making changes 
 
