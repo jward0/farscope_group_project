@@ -7,3 +7,4 @@ catkin_make
 echo "source ~/farscope_group_project/catkin_ws/devel/setup.bash" >> ~/.bashrc
 source ~/.bashrc
 sudo apt-get install ros-melodic-ros-control ros-melodic-ros-controllers
+sudo apt install ros-melodic-moveit
