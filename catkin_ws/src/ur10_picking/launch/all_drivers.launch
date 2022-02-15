@@ -1,8 +1,10 @@
 <launch>
 	<arg name="sim" default="true" />
+	<arg name="limited" default="false" />
 	
 	<include file="$(find ur10_moveit_config)/launch/ur10_moveit_planning_execution.launch">
 		<arg name="sim" default="$(arg sim)"/>
+		<arg name="limited" default="$(arg limited)"/>
 	</include>
 	
 	<node name="controller" pkg="ur10_picking" type="central_controller.py"/>
