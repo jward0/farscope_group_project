@@ -19,7 +19,7 @@
 # Starting the robot
 
 1. In one terminal, run ```roslaunch ur_bringup ur10_bringup.launch limited:=true robot_ip:=192.168.1.189```
-2. In another, run ```roslaunch ur10_picking all_drivers.launch sim:=false```
+2. In another, run ```roslaunch ur10_picking all_drivers.launch sim:=false limited:=false```
 
 # Making changes 
 
