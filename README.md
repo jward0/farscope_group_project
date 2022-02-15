@@ -15,7 +15,11 @@
 
 1. In one terminal, run ```roslaunch ur_gazebo ur10.launch```
 2. In another, run ```roslaunch ur10_picking all_drivers.launch```
-3. To run the drivers to a real robot rather than the simulation (probably doesn't do anything yet) instead of step 2 run ```roslaunch ur10_picking all_drivers.launch sim:=false```
+
+# Starting the robot
+
+1. In one terminal, run ```roslaunch ur_bringup ur10_bringup.launch limited:=true robot_ip:=192.168.1.189```
+2. In another, run ```roslaunch ur10_picking all_drivers.launch sim:=false```
 
 # Making changes 
 
