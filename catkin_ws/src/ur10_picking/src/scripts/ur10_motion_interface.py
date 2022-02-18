@@ -34,17 +34,17 @@ class MoveitInterface():
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 
-    #def feedback(self):
-    #    pose = self.move_group.get_current_pose().pose
-    #    self.pose_talker.send(pose)
+    def feedback(self):
+        pose = self.move_group.get_current_pose().pose
+        self.pose_talker.send(pose)
 
 
 if __name__ == "__main__":
 
     interface = MoveitInterface()
-    rate = rospy.Rate(10)
+    rate = rospy.Rate(1)
 
     while not rospy.is_shutdown():
-        #interface.feedback()
+        interface.feedback()
         rate.sleep()
 

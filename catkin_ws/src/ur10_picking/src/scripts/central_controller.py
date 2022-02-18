@@ -14,6 +14,8 @@ class PoseTalker():
 
 
 def print_callback(arg):
+    print("----------------")
+    print(rospy.get_time())
     print(arg)
 
 
