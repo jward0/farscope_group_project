@@ -29,3 +29,9 @@
 3. Push local branch to remote 
 4. When work on the branch is complete, open a pull request to merge the remote branch with main, which I (James) will review before merging 
 5. Don't try to commit directly to remote main (it won't work) 
+
+# Workarounds for known issues
+
+1. Issues starting ur drivers/simulations such as ```[gazebo-#] process has died``` or moveit drivers failing to start occur occasionally (usually when the relevant processes have been stopped and restarted in the same terminal window) and are outside of my purview. These can be worked around by closing and reopening all terminal windows. Killing all ROS processes and trying again without restarting the terminal window does not seem to have any effect.
+
+
