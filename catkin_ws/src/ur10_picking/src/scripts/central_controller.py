@@ -5,12 +5,18 @@ from geometry_msgs.msg import Pose
 
 class PoseTalker():
 
-    def __init__(self):
+    def __init__(self, publisher_name):
 
-        self.pub = rospy.Publisher("/controller/next_cartesian_pose", Pose, queue_size=10)
+        self.pub = rospy.Publisher(publisher_name, Pose, queue_size=10)
 
     def send(self, pose):
         self.pub.publish(pose)
+
+
+def print_callback(arg):
+    print("----------------")
+    print(rospy.get_time())
+    print(arg)
 
 
 if __name__ == "__main__":
@@ -24,8 +30,9 @@ if __name__ == "__main__":
     zero_pose.position.y = 0.5
     zero_pose.position.z = 0.5
 
-    pose_talker = PoseTalker()
+    pose_talker = PoseTalker('/controller/next_cartesian_pose')
     pose_talker.send(zero_pose)
+    rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', Pose, print_callback)
 
     rospy.sleep(1.0)
 
