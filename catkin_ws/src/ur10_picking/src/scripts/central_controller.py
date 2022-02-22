@@ -26,9 +26,13 @@ if __name__ == "__main__":
     rate = rospy.Rate(10)
 
     zero_pose = Pose()
-    zero_pose.position.x = 0.5
+    zero_pose.position.x = -0.1
     zero_pose.position.y = 0.5
-    zero_pose.position.z = 0.5
+    zero_pose.position.z = 0.3
+    zero_pose.orientation.x = 0
+    zero_pose.orientation.y = 0
+    zero_pose.orientation.z = 0.7071081
+    zero_pose.orientation.w = 0.7071055
 
     pose_talker = PoseTalker('/controller/next_cartesian_pose')
     pose_talker.send(zero_pose)
