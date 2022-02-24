@@ -1,8 +1,9 @@
 <launch>
 	<node name="controller" pkg="ur10_picking" type="central_controller.py"/>
 	<node name="moveit_interface" pkg="ur10_picking" type="ur10_motion_interface.py"/>
+	
 	<node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-    	<param name="port" value="/dev/ttyUSB0"/>
-    	<param name="baud" value="57600"/>
+    		<param name="port" value="/dev/ttyUSB0"/>
+    		<param name="baud" value="57600"/>
     	</node>
 </launch>
