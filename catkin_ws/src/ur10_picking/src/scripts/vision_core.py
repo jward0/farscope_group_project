@@ -26,7 +26,12 @@ def draw_depth_markers(frame, corners, ids):
             cv2.circle(frame, (cX, cY), 4, (0, 0, 255), -1)
 
             depth = round(aligned_depth_frame.get_distance(cX, cY),3)
-            cv2.putText(frame, str(markerID)+":"+str(depth),
+
+            depth_intrinsic = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
+            result = rs.rs2_deproject_pixel_to_point(depth_intrinsic, [cX, cY], depth)
+            result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
+
+            cv2.putText(frame, result_string,
 				(topLeft[0], topLeft[1] - 15),
 				cv2.FONT_HERSHEY_SIMPLEX,
 				0.5, (0, 255, 0), 2)
@@ -103,6 +108,7 @@ try:
         aligned_frames = align.process(frames)
 
         aligned_depth_frame = aligned_frames.get_depth_frame()
+
         color_frame = aligned_frames.get_color_frame()
 
         if not aligned_depth_frame or not color_frame:
