@@ -1,4 +1,4 @@
 <launch>
-	<node name="controller" pkg="ur10_picking" type="central_controller.py"/>
+	<node name="pipeline" pkg="ur10_picking" type="pipeline.py"/>
 	<node name="moveit_interface" pkg="ur10_picking" type="ur10_motion_interface.py"/>
 </launch>
