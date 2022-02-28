@@ -31,7 +31,11 @@ class MoveitInterface():
         self.pose_talker = PoseTalker('/moveit_interface/cartesian_pose_feedback')
         self.sub = rospy.Subscriber('/pipeline/next_cartesian_pose', poseMessage, self.move_to_pose)
 
-        self.move_group.set_joint_value_target([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        self.move_group.set_joint_value_target([1.571, -1.571, 0.0, 0.0, 0.0, 0.0])
+        self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+        self.move_group.set_joint_value_target([2.014, -1.735, -1.990, -2.559, 2.015, -3.140])
         self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
@@ -39,10 +43,10 @@ class MoveitInterface():
     def move_to_pose(self, pose_message):
 
         if pose_message.incremental:
-            pose = self.move_group.get_current_pose()
-            pose.x += pose_message.pose.position.x
-            pose.y += pose_message.pose.position.y
-            pose.z += pose_message.pose.position.z
+            pose = self.move_group.get_current_pose().pose
+            pose.position.x += pose_message.pose.position.x
+            pose.position.y += pose_message.pose.position.y
+            pose.position.z += pose_message.pose.position.z
         else:
             pose = pose_message.pose
 
@@ -53,6 +57,10 @@ class MoveitInterface():
 
     def feedback(self):
     
+        joint_states_temp = self.move_group.get_current_joint_values()
+        print("++++++++++++++++++++++++++++++++++++")
+        print(joint_states_temp)
+        print("++++++++++++++++++++++++++++++++++++")
         pose = self.move_group.get_current_pose().pose
         self.pose_talker.send(pose)
 

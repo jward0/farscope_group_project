@@ -35,8 +35,8 @@ class Pipeline():
     def pose_start(self):
 
         start_pose = Pose()
-        start_pose.position.x = -0.1
-        start_pose.position.y = 0.5
+        start_pose.position.x = 0.1
+        start_pose.position.y = -0.5
         start_pose.position.z = 0.3
         start_pose.orientation.x = 0
         start_pose.orientation.y = 0
@@ -45,19 +45,19 @@ class Pipeline():
     
         self.pose_talker.send(start_pose)
 
-        rospy.sleep(5.0)
+        rospy.sleep(10.0)
  
 
 if __name__ == "__main__":
 
     pipeline = Pipeline()
-    rospy.sleep(5.0) # To allow robot to home before sending start pose
-    pipeline.pose_start()
+    rospy.sleep(10.0) # To allow robot to home before sending start pose
+    # pipeline.pose_start()
 
     pose_adjustment = Pose()
-    # pose_adjustment.position.x = 0.01
+    pose_adjustment.position.x = 0.01
 
     while not rospy.is_shutdown():
-        # pipeline.pose_talker.send(pose_adjustment, incremental=True)        
+        pipeline.pose_talker.send(pose_adjustment, incremental=True)        
         pipeline.rate.sleep()   
 
