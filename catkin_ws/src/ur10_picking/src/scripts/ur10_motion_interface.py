@@ -2,17 +2,17 @@
 import rospy
 import sys
 import moveit_commander
-from geometry_msgs.msg import Pose
-from ur10_picking.msg import poseMessage
+from geometry_msgs.msg import Pose, PoseArray
+from ur10_picking.msg import PoseMessage
 
 class PoseTalker():
 
     def __init__(self, publisher_name):
 
-        self.pub = rospy.Publisher(publisher_name, poseMessage, queue_size=10)
+        self.pub = rospy.Publisher(publisher_name, PoseMessage, queue_size=10)
 
     def send(self, pose, incremental=False):
-        pose_msg = poseMessage()
+        pose_msg = PoseMessage()
         pose_msg.pose = pose
         pose_msg.incremental = incremental
         self.pub.publish(pose_msg)
@@ -29,7 +29,8 @@ class MoveitInterface():
         self.move_group = moveit_commander.MoveGroupCommander('manipulator')
         
         self.pose_talker = PoseTalker('/moveit_interface/cartesian_pose_feedback')
-        self.sub = rospy.Subscriber('/pipeline/next_cartesian_pose', poseMessage, self.move_to_pose)
+        self.pose_sub = rospy.Subscriber('/pipeline/next_cartesian_pose', PoseMessage, self.move_to_pose)
+        self.trajectory_sub = rospy.Subscriber('/pipeline/cartesian_trajectory', PoseArray, self.move_trajectory)
 
         self.move_group.set_joint_value_target([1.571, -1.571, 0.0, 0.0, 0.0, 0.0])
         self.move_group.go(wait=True)
@@ -54,6 +55,16 @@ class MoveitInterface():
 
         self.move_group.set_pose_target(pose)
         self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
+    def move_trajectory(self, cartesian_trajectory):
+
+        (plan, fraction) = self.move_group.compute_cartesian_path(
+                                                cartesian_trajectory,
+                                                0.01,
+                                                0.0)
+        self.move_group.execute(plan, wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 

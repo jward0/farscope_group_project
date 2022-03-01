@@ -1,20 +1,30 @@
 #!/usr/bin/env python
 
 import rospy
-from geometry_msgs.msg import Pose
-from ur10_picking.msg import poseMessage 
+from geometry_msgs.msg import Pose, PoseArray
+from ur10_picking.msg import PoseMessage
 
 class PoseTalker():
 
     def __init__(self, publisher_name):
 
-        self.pub = rospy.Publisher(publisher_name, poseMessage, queue_size=10)
+        self.pub = rospy.Publisher(publisher_name, PoseMessage, queue_size=10)
 
     def send(self, pose, incremental=False):
-        pose_msg = poseMessage()
+        pose_msg = PoseMessage()
         pose_msg.pose = pose
         pose_msg.incremental = incremental
         self.pub.publish(pose_msg)
+
+
+class TrajectoryTalker():
+
+    def __init__(self, publisher_name):
+
+        self.pub = rospy.Publisher(publisher_name, PoseArray, queue_size=10)
+
+    def send(self, trajectory):
+        self.pub.publish(trajectory)
 
 
 def print_callback(arg):
@@ -30,7 +40,8 @@ class Pipeline():
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
         self.pose_talker = PoseTalker('/pipeline/next_cartesian_pose')
-        rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', poseMessage, print_callback)
+        self.trajectory_talker = PoseTalker('/pipeline/cartesian_trajectory')
+        rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', PoseMessage, print_callback)
     
     def pose_start(self):
 
