@@ -37,6 +37,8 @@
 # Useful poses
 
 Straight upright joint angles: ```[1.571, -1.571, 0.0, 0.0, 0.0, 0.0]```
+
 Provisional simulation start joint angles: ```[2.014, -1.735, -1.990, -2.559, 2.015, 0.0]``` 
+
 Provisional real robot start joint angles: ```[1.407, -1.812, 2.184, -0.384, 1.408, 0.0]```
 
