@@ -51,7 +51,7 @@ class Pipeline():
 if __name__ == "__main__":
 
     pipeline = Pipeline()
-    rospy.sleep(10.0) # To allow robot to home before sending start pose
+    rospy.sleep(30.0) # To allow robot to home before sending start pose
     # pipeline.pose_start()
 
     pose_adjustment = Pose()
