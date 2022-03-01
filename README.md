@@ -34,4 +34,9 @@
 
 1. Issues starting ur drivers/simulations such as ```[gazebo-#] process has died``` or moveit drivers failing to start occur occasionally (usually when the relevant processes have been stopped and restarted in the same terminal window) and are outside of my purview. These can be worked around by closing and reopening all terminal windows. Killing all ROS processes and trying again without restarting the terminal window does not seem to have any effect.
 
+# Useful poses
+
+Straight upright joint angles: ```[1.571, -1.571, 0.0, 0.0, 0.0, 0.0]```
+Provisional simulation start joint angles: ```[2.014, -1.735, -1.990, -2.559, 2.015, 0.0]``` 
+Provisional real robot start joint angles: ```[1.407, -1.812, 2.184, -0.384, 1.408, 0.0]```
 
