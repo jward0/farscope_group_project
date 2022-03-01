@@ -35,10 +35,12 @@ class MoveitInterface():
         self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
-        self.move_group.set_joint_value_target([2.014, -1.735, -1.990, -2.559, 2.015, -3.140])
+        rospy.sleep(10.0)
+        self.move_group.set_joint_value_target([1.407, -1.812, 2.184, -0.384, 1.408, 0.0])
         self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
+        rospy.sleep(10.0)
 
     def move_to_pose(self, pose_message):
 
