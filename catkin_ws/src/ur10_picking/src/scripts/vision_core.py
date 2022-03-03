@@ -1,7 +1,11 @@
+from cProfile import label
 import profile
 import cv2
 import numpy as np
 import pyrealsense2 as rs
+
+import sys
+
 
 def draw_depth_markers(frame, corners, ids):
     if len(corners) > 0:
@@ -129,7 +133,7 @@ try:
         arcu_depth_image = draw_depth_markers(depth_colormap, corners, ids)
 
 
-        images = np.hstack((aruco_image, arcu_depth_image))
+        images = np.hstack((aruco_image, depth_colormap))
         cv2.namedWindow('Aligned', cv2.WINDOW_NORMAL)
         cv2.imshow('Aligned', images)
         key = cv2.waitKey(1)
