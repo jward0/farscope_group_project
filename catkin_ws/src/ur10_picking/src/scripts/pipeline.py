@@ -35,13 +35,18 @@ def print_callback(arg):
 
 class Pipeline():
 
+    
     def __init__(self):
     
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
         self.pose_talker = PoseTalker('/pipeline/next_cartesian_pose')
-        self.trajectory_talker = PoseTalker('/pipeline/cartesian_trajectory')
-        rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', PoseMessage, print_callback)
+        self.trajectory_talker = TrajectoryTalker('/pipeline/cartesian_trajectory')
+        rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', PoseMessage, self.log_pose)
+    
+    def log_pose(self, pose):
+        self.current_pose = pose
+        print_callback(pose)
     
     def pose_start(self):
 
@@ -63,10 +68,30 @@ if __name__ == "__main__":
 
     pipeline = Pipeline()
     rospy.sleep(30.0) # To allow robot to home before sending start pose
-    # pipeline.pose_start()
-
+    
     pose_adjustment = Pose()
     pose_adjustment.position.x = 0.01
+    
+    while not pipeline.current_pose.pose
+        rospy.sleep(0.5)
+       
+    next_pose = pipeline.current_pose.pose
+    waypoints = []
+    next_pose.position.x += 0.02
+    waypoints.append(copy.deepcopy(next_pose))
+    next_pose.position.z += 0.04
+    waypoints.append(copy.deepcopy(next_pose))
+    next_pose.position.x -= 0.04
+    waypoints.append(copy.deepcopy(next_pose))
+    next_pose.position.z -= 0.04
+    waypoints.append(copy.deepcopy(next_pose))
+    next_pose.position.x += 0.02
+    waypoints.append(copy.deepcopy(next_pose))
+    
+    trajectory_message = PoseArray()
+    trajectory_message.poses = waypoints
+    pipeline.trajectory_talker.send(trajectory_message)
+    rospy.sleep(30.0)
 
     while not rospy.is_shutdown():
         pipeline.pose_talker.send(pose_adjustment, incremental=True)        
