@@ -72,7 +72,7 @@ if __name__ == "__main__":
     pose_adjustment = Pose()
     pose_adjustment.position.x = 0.01
     
-    while not pipeline.current_pose.pose
+    while not pipeline.current_pose
         rospy.sleep(0.5)
        
     next_pose = pipeline.current_pose.pose
