@@ -61,7 +61,7 @@ class MoveitInterface():
     def move_trajectory(self, cartesian_trajectory):
 
         (plan, fraction) = self.move_group.compute_cartesian_path(
-                                                cartesian_trajectory,
+                                                cartesian_trajectory.poses,
                                                 0.01,
                                                 0.0)
         self.move_group.execute(plan, wait=True)
