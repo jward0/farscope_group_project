@@ -1,99 +1,213 @@
 #!/usr/bin/env python
 
+import copy
 import rospy
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
 
-class PoseTalker():
 
-    def __init__(self, publisher_name):
+class State:
+    """
+    Define statemachine class
+    Each state will be initiated using this class.
+    The class includes state name, on_event, next_state
+    """
 
-        self.pub = rospy.Publisher(publisher_name, PoseMessage, queue_size=10)
+    def __init__(self):
+        print("Initiating state:", str(self))
 
-    def send(self, pose, incremental=False):
-        pose_msg = PoseMessage()
-        pose_msg.pose = pose
-        pose_msg.incremental = incremental
-        self.pub.publish(pose_msg)
+    def run(self):
+        assert 0, "run not implemented"
 
+    def on_event(self, event):
+        assert 0, "on_event not implemented"
 
-class TrajectoryTalker():
-
-    def __init__(self, publisher_name):
-
-        self.pub = rospy.Publisher(publisher_name, PoseArray, queue_size=10)
-
-    def send(self, trajectory):
-        self.pub.publish(trajectory)
+    def next_state(self, input):
+        assert 0, "next state not implemented"
 
 
-def print_callback(arg):
-    print("----------------")
-    print(rospy.get_time())
-    print(arg)
+class Initialise(State):
+    """
+    Class defintion for the initialisation state
+    Run launch file
+    Turn on and check nodes are on and topics are publishing
+    Prioritisation - list of lists output
+    """
+
+    def run(self):
+        print("Initialising the system and prioritising items")
+        # Do item initiation program here
+        # Do item prioritisation program here
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, input):
+        if input == "Initialisation complete":
+            return True
+        else:
+             return False
 
 
-class Pipeline():
+class Calibration(State):
+    """
+    Class definition for the calibration state
+    Output - binary status of calibration = 1
+    Output - Home position - hard coded - move to home
+    output - Bin position - xyz
+    Output - Centroids of each shelf - list or dict of coordinates / Pose for shelf home
+    """
 
-    
+    def run(self):
+        print("Beginning calibration process")
+        # Do vision system calibration
+        # Do vacuum calibration
+        Pipeline.vacuumcalibration.call("begin vacuum calibration")
+        # Do robot arm calibration - position relative to shelf
+        # Do any other calibration
+        print("Calibration complete")
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, input):
+        if input == "Calibration complete":
+
+            return True
+        else:
+            return False
+
+
+class FindShelf(State):
+    """
+    Class definition for the FindShelf state
+    """
+
+    def run(self):
+        print("Moving to shelf")
+        # Read item from prioritised list
+        # Identify shelf reference
+        self.shelf_centre = 0
+        # Move to shelf centre
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, input):
+        coordinates = input
+        if coordinates == self.shelf_centre:
+            return True
+        else:
+            return False
+
+
+class AssessShelf(State):
+    """
+    Class definition for assesing the shelf using the vision system
+    """
+
+    def run(self):
+        # Assess shelf - use vision node topic to extract the centroid of the item
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, input):
+        # Move to next state when there is a confirmed centroid for the item
+
+
+class ServiceCaller:
+    """
+    Define service class
+    This class is defined for each ROS service interaction
+    The class can send a request to a service and process a response from a service
+    :attribute servicename: string
+        string name for the service as defined in the service definition
+    :attribute service_class: class
+        service class as defined in the service definition and imported from the relevent package
+    """
+
+    def __init__(self, servicename, service_class):
+        self.servicename = servicename
+        self.service_class = service_class
+        rospy.wait_for_service(servicename)
+        # rospy.loginfo("Connected to service:", servicename)
+
+    def call(self, req):
+        """
+        Sends a service request to the service attributed with this class
+        :param req: request to be sent to the class. The data type for this varies based on the service definition
+        :return: returns the response from the service
+        """
+        rospy.wait_for_service(self.servicename)
+        client = rospy.ServiceProxy(self.servicename, self.service_class)
+        response = client(req)
+        return response
+
+
+class TopicReader:
+    def __init__(self, topic_name, data_class):
+        self.var = None
+        self.topic_name = topic_name
+        self.data_class = data_class
+        rospy.Subscriber(self.topic_name, self.data_class, self.callback)
+        rospy.sleep(1)
+        rospy.loginfo("Reading topic {}...the following data has been read: {}".format(topic_name, self.var))
+
+    def callback(self, data):
+        """
+        Callback function - this is called automatically from the readtopic() function below
+        Sets the self.var variable to the data from the topic
+        :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
+        """
+        self.var = data.data
+
+    def read_topic(self):
+        """
+        :return: returns the data read from the topic
+        """
+        rospy.Subscriber(self.topic_name, self.data_class, self.callback)
+        rospy.sleep(1)
+
+        return self.var
+
+
+class TopicWriter:
+    """
+    Define topicreader class to read data from published ROS topics
+    This class processes data from a ROS topic and returns it
+    :attribute: readname: name of the topic to subscribe and read from. Default to "none" if publishing only
+    :attribute: writename: name of the topic to publish and write to. Default to "none" if subscribing only
+    :attribute: read_data_class: data
+    """
+
+    def __init__(self, topic_name, data_class):
+        self.var = None
+        self.topic_name = topic_name
+        self.data_class = data_class
+        self.pub = rospy.Publisher(topic_name, self.data_class, queue_size=10)
+
+    def write_topic(self, message):
+        """
+        Write to the topic that has been created
+        :param message: Input data to be published to this topic
+        """
+        self.pub.publish(message)
+
+
+class Pipeline:
+
     def __init__(self):
     
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
-        self.pose_talker = PoseTalker('/pipeline/next_cartesian_pose')
-        self.trajectory_talker = TrajectoryTalker('/pipeline/cartesian_trajectory')
-        rospy.Subscriber('/moveit_interface/cartesian_pose_feedback', PoseMessage, self.log_pose)
-    
-    def log_pose(self, pose):
-        self.current_pose = pose
-        print_callback(pose)
-    
-    def pose_start(self):
+        self.current_pose = None
+        self.pose_publisher = TopicWriter('/pipeline/next_cartesian_pose', PoseMessage)
+        self.trajectory_publisher = TopicWriter('/pipeline/cartesian_trajectory', PoseArray)
+        self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
 
-        start_pose = Pose()
-        start_pose.position.x = 0.1
-        start_pose.position.y = -0.5
-        start_pose.position.z = 0.3
-        start_pose.orientation.x = 0
-        start_pose.orientation.y = 0
-        start_pose.orientation.z = 0.707
-        start_pose.orientation.w = 0.707
-    
-        self.pose_talker.send(start_pose)
-
-        rospy.sleep(10.0)
- 
 
 if __name__ == "__main__":
 
     pipeline = Pipeline()
     rospy.sleep(30.0) # To allow robot to home before sending start pose
-    
-    pose_adjustment = Pose()
-    pose_adjustment.position.x = 0.01
-    
-    while not pipeline.current_pose
-        rospy.sleep(0.5)
-       
-    next_pose = pipeline.current_pose.pose
-    waypoints = []
-    next_pose.position.x += 0.02
-    waypoints.append(copy.deepcopy(next_pose))
-    next_pose.position.z += 0.04
-    waypoints.append(copy.deepcopy(next_pose))
-    next_pose.position.x -= 0.04
-    waypoints.append(copy.deepcopy(next_pose))
-    next_pose.position.z -= 0.04
-    waypoints.append(copy.deepcopy(next_pose))
-    next_pose.position.x += 0.02
-    waypoints.append(copy.deepcopy(next_pose))
-    
-    trajectory_message = PoseArray()
-    trajectory_message.poses = waypoints
-    pipeline.trajectory_talker.send(trajectory_message)
-    rospy.sleep(30.0)
-
-    for _ in range(10):
-        pipeline.pose_talker.send(pose_adjustment, incremental=True)        
-        pipeline.rate.sleep()   
-
