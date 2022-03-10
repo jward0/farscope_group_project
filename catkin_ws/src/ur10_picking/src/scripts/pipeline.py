@@ -93,7 +93,7 @@ if __name__ == "__main__":
     pipeline.trajectory_talker.send(trajectory_message)
     rospy.sleep(30.0)
 
-    while not rospy.is_shutdown():
+    for _ in range(10):
         pipeline.pose_talker.send(pose_adjustment, incremental=True)        
         pipeline.rate.sleep()   
 
