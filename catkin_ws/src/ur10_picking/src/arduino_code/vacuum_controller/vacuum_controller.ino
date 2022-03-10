@@ -104,7 +104,7 @@ void setup()
 
   // Initiate the BME sensor
   bool rslt;
-  rslt = bme.begin(0x77);  
+  rslt = bme.begin(0x76);  
   if (!rslt) {
       while (1);
   } 
