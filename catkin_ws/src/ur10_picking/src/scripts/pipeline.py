@@ -195,10 +195,9 @@ class TopicWriter:
         self.pub.publish(message)
 
 
-class Pipeline:
+class PipelineCore:
 
     def __init__(self):
-    
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
         self.current_pose = None
@@ -207,7 +206,10 @@ class Pipeline:
         self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
 
 
-if __name__ == "__main__":
+def run_pipeline():
 
-    pipeline = Pipeline()
-    rospy.sleep(30.0) # To allow robot to home before sending start pose
+    pipeline_core = PipelineCore
+
+
+if __name__ == "__main__":
+    run_pipeline()
