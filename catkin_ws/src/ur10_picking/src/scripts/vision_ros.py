@@ -1,4 +1,5 @@
 from ur10_picking.srv import detect_markers
+from ur10_picking.srv import detect_object
 from ur10_picking.msg import arucoMarker
 from ur10_picking.msg import arucoMarkerArray
 from geometry_msgs.msg import Point
@@ -15,7 +16,12 @@ from cv_bridge import CvBridge
 
 class Vision_Core(object):
     def __init__(self):
-        self.enable_camera = False
+        self.hlow = 15
+        self.hhigh = 180
+        self.slow = 35
+        self.shigh = 255
+        self.vlow = 100
+        self.vhigh = 255
 
         self.pipeline = rs.pipeline()
         self.config = rs.config()
@@ -46,10 +52,7 @@ class Vision_Core(object):
     def start(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
-            if self.enable_camera:
-                pass
-            else:
-                pass
+            
 
             rate.sleep()  
 
@@ -109,11 +112,116 @@ def handle_detect_markers(req):
 
     return toReturn
 
+def handle_detect_objects(req):
+    object = Point(0,0,0)
+    frames = vision_core.pipeline.wait_for_frames()
+    aligned_frames = vision_core.align.process(frames)
+    aligned_depth_frame = aligned_frames.get_depth_frame()
+    color_frame = aligned_frames.get_color_frame()
+    
+    for x in range(5):
+        vision_core.pipeline.wait_for_frames()
+
+    depth_image = np.asanyarray(aligned_depth_frame.get_data())
+    color_image = np.asanyarray(color_frame.get_data())
+
+    (corners, ids, rejected) = cv2.aruco.detectMarkers(color_image, vision_core.arucoDict, parameters=vision_core.arucoParmas)
+    shelf_image, shelf_image_depth = get_shelf(color_image, depth_image,corners, ids)
+    maskedShelf, maskedShelf_mask = maskShelf(shelf_image)
+
+    contours = findContours(maskedShelf_mask, 1)
+
+    for c in contours:
+            rect = cv2.boundingRect(c)
+            x,y,w,h = rect
+            depthLevel = getDepthOfRect(depth_image,rect)
+            coords = getDepth([x+w/2, w+h/2], depthLevel, aligned_depth_frame)
+            print("Detected Objects")
+            print(coords)
+            object = Point(coords[0], coords[1], coords[2])
+    
+    return object
+
+def get_shelf(color, depth, corners, ids):
+    mask = np.zeros(color.shape, np.uint8)
+    if len(corners) > 0:
+		# flatten the ArUco IDs list
+        ids = ids.flatten()
+        markerCenters = {}
+		# loop over the detected ArUCo corners
+        for (markerCorner, markerID) in zip(corners, ids):
+			# extract the marker corners (which are always returned
+			# in top-left, top-right, bottom-right, and bottom-left
+			# order)
+            corners = markerCorner.reshape((4, 2))
+            (topLeft, topRight, bottomRight, bottomLeft) = corners
+
+			# compute and draw the center (x, y)-coordinates of the
+			# ArUco marker
+            cX = int((topLeft[0] + bottomRight[0]) / 2.0)
+            cY = int((topLeft[1] + bottomRight[1]) / 2.0)
+            if markerID == 0:
+                markerCenters[markerID] = [bottomRight[0], bottomRight[1]]
+            if markerID == 1:
+                markerCenters[markerID] = [bottomLeft[0], bottomLeft[1]]
+            if markerID == 2:
+                markerCenters[markerID] = [topRight[0], topRight[1]]
+            if markerID == 3:
+                markerCenters[markerID] = [topLeft[0], topLeft[1]]
+
+            cv2.circle(color, (cX, cY), 4, (0, 0, 255), -1)
+            
+        if(len(markerCenters) >= 4):
+            pts = np.array([markerCenters[0],markerCenters[1],markerCenters[3],markerCenters[2]], np.int32)
+            pts = pts.reshape((-1,1,2))
+            cv2.fillPoly(mask,[pts],(255,255,255))
+            mask_gray=cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+            color = cv2.bitwise_and(color,color,mask = mask_gray)
+            depth = np.bitwise_and(depth, mask_gray)
+        
+    return color, depth
+
+def maskShelf(color_img):
+    hsv = cv2.cvtColor(color_img, cv2.COLOR_BGR2HSV)
+
+    mask_background = cv2.inRange(hsv,(vision_core.hlow,vision_core.slow,vision_core.vlow),(vision_core.hhigh,vision_core.shigh,vision_core.vhigh))
+
+    kernel = np.ones((10,10),np.uint8)          
+    mask_background = cv2.morphologyEx(mask_background, cv2.MORPH_CLOSE, kernel)
+
+    color_img = cv2.bitwise_and(color_img,color_img,mask =  mask_background)
+
+    return color_img, mask_background
+
+def findContours(img, amount):
+    objects = []
+
+    contours, hierarchy = cv2.findContours(image=img, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)
+    contours = contours[:amount]
+    toDraw = []
+    #cv2.drawContours(image=shelf_image, contours=contours[:1], contourIdx=-1, color=(0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
+
+    return contours
+
+def getDepthOfRect(depth, rect):
+    x,y,w,h = rect
+    depth = depth[x+w/2,y+h/2].astype(float)
+    depth = depth * vision_core.depth_scale
+    return depth
+
+def getDepth(point, depth, aligned_depth_frame):
+    depth_intrinsic = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
+    result = rs.rs2_deproject_pixel_to_point(depth_intrinsic, [point[0], point[1]], depth)
+    #result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
+
+    return result
 
 def init_ros():
-    rospy.init_node('camera_server')
-    s = rospy.Service('detect_markers', detect_markers, handle_detect_markers)
-    print("Ready for camera")
+    rospy.init_node('vision_server')
+    markerDetection = rospy.Service('detect_markers', detect_markers, handle_detect_markers)
+    detectObject = rospy.Service('detect_object', detect_object, handle_detect_objects)
+    print("Vision Server Ready")
 
 
 if __name__ == "__main__":

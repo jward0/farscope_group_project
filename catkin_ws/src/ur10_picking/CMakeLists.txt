@@ -58,8 +58,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-   enabled_camera.srv
    detect_markers.srv
+   detect_object.srv
  )
 
 ## Generate actions in the 'action' folder
