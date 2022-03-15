@@ -16,7 +16,7 @@ class State:
     def __init__(self):
         print("Initiating state:", str(self))
 
-    def run(self):
+    def run(self, pipeline_core):
         assert 0, "run not implemented"
 
     def on_event(self, event):
@@ -34,22 +34,26 @@ class Initialise(State):
     Prioritisation - list of lists output
     """
 
-    def run(self):
+    def run(self, pipeline_core):
         print("Initialising the system and prioritising items")
         # Do item initiation program here
         # Do item prioritisation program here
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self, input):
-        if input == "Initialisation complete":
-            return True
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Initialisation complete")
+            return 2  # Move to Calibration
         else:
-             return False
+             return 1  # Stay in Initialise
 
 
-class Calibration(State):
+class Calibrate(State):
     """
     Class definition for the calibration state
     Output - binary status of calibration = 1
@@ -58,24 +62,26 @@ class Calibration(State):
     Output - Centroids of each shelf - list or dict of coordinates / Pose for shelf home
     """
 
-    def run(self):
+    def run(self, pipeline_core):
         print("Beginning calibration process")
         # Do vision system calibration
         # Do vacuum calibration
-        Pipeline.vacuumcalibration.call("begin vacuum calibration")
+        
         # Do robot arm calibration - position relative to shelf
         # Do any other calibration
-        print("Calibration complete")
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self, input):
-        if input == "Calibration complete":
+    def next_state(self, state_complete):
 
-            return True
+        if state_complete:
+            print("Calibration complete")
+            return 3  # Move to FindShelf
         else:
-            return False
+            return 2  # Stay in Initialise
 
 
 class FindShelf(State):
@@ -83,22 +89,38 @@ class FindShelf(State):
     Class definition for the FindShelf state
     """
 
-    def run(self):
+    def run(self, pipeline_core):
         print("Moving to shelf")
-        # Read item from prioritised list
-        # Identify shelf reference
-        self.shelf_centre = 0
-        # Move to shelf centre
+       
+        pose_msg = PoseMessage()
+        shelf_centre_pose = Pose()
+        shelf_centre_pose.position.x = 0.1
+        shelf_centre_pose.position.y = -0.5
+        shelf_centre_pose.position.z = 0.3
+        shelf_centre_pose.orientation.x = 0
+        shelf_centre_pose.orientation.y = 0
+        shelf_centre_pose.orientation.z = 0
+
+        pose_msg.pose = shelf_centre_pose
+        pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(5.0)
+
+        state_complete = True
+        return self.next_state(state_complete)
+
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self, input):
-        coordinates = input
-        if coordinates == self.shelf_centre:
-            return True
+    def next_state(self, state_complete):
+        
+        if state_complete:
+            print("Shelf found")
+            return 4  # Move to AssessShelf
         else:
-            return False
+            return 3  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -107,13 +129,22 @@ class AssessShelf(State):
     """
 
     def run(self):
+        print("Assessing shelf")
         # Assess shelf - use vision node topic to extract the centroid of the item
+
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self, input):
+    def next_state(self, state_complete):
         # Move to next state when there is a confirmed centroid for the item
+        if state_complete:
+            print("Assessment complete")
+            return 5 # End
+        else:
+            return 4 # Stay in AssessShelf
 
 
 class ServiceCaller:
@@ -160,7 +191,7 @@ class TopicReader:
         Sets the self.var variable to the data from the topic
         :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
         """
-        self.var = data.data
+        self.var = data
 
     def read_topic(self):
         """
@@ -195,6 +226,35 @@ class TopicWriter:
         self.pub.publish(message)
 
 
+class StateSupervisor:
+
+    def __init__(self):
+
+        self.status = 0
+        self.state_initialise = Initialise()
+        self.state_calibrate = Calibrate()
+        self.state_find_shelf = FindShelf()
+        self.state_assess_shelf = AssessShelf()
+
+        print("State machine started. Current status:", self.status)
+
+    def run(self, pipeline_core):
+
+        if self.status == 0:
+            self.status = self.state_initialise.run(pipeline_core)
+        if self.status == 1:
+            self.status = self.state_calibrate.run(pipeline_core)
+        if self.status == 2:
+            self.status = self.state_find_shelf.run(pipeline_core)
+        if self.status == 3:
+            self.status = self.state_assess_shelf.run(pipeline_core)
+        if self.status == 4:
+            print("Demo completed")
+
+    def report_status(self):
+        print("Current state: ", self.status)
+
+
 class PipelineCore:
 
     def __init__(self):
@@ -207,9 +267,15 @@ class PipelineCore:
 
 
 def run_pipeline():
-
-    pipeline_core = PipelineCore
+    pipeline_core = PipelineCore()
+    while not pipeline_core.pose_feedback_subscriber.var:
+        rospy.sleep(0.1)
+    state_machine = StateSupervisor()
+    while True:
+        state_machine.run(pipeline_core)
+        rospy.spin()
 
 
 if __name__ == "__main__":
     run_pipeline()
+    

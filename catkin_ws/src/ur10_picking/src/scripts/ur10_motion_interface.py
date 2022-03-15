@@ -71,9 +71,9 @@ class MoveitInterface():
     def feedback(self):
     
         joint_states_temp = self.move_group.get_current_joint_values()
-        print("++++++++++++++++++++++++++++++++++++")
-        print(joint_states_temp)
-        print("++++++++++++++++++++++++++++++++++++")
+        # print("++++++++++++++++++++++++++++++++++++")
+        # print(joint_states_temp)
+        # print("++++++++++++++++++++++++++++++++++++")
         pose = self.move_group.get_current_pose().pose
         self.pose_talker.send(pose)
 
