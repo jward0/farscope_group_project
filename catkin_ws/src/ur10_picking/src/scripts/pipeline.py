@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import copy
 import rospy
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
@@ -22,7 +21,7 @@ class State:
     def on_event(self, event):
         assert 0, "on_event not implemented"
 
-    def next_state(self, input):
+    def next_state(self, state_complete):
         assert 0, "next state not implemented"
 
 
@@ -35,6 +34,10 @@ class Initialise(State):
     """
 
     def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Initialising the system and prioritising items")
         # Do item initiation program here
         # Do item prioritisation program here
@@ -50,7 +53,7 @@ class Initialise(State):
             print("Initialisation complete")
             return 2  # Move to Calibration
         else:
-             return 1  # Stay in Initialise
+            return 1  # Stay in Initialise
 
 
 class Calibrate(State):
@@ -63,6 +66,10 @@ class Calibrate(State):
     """
 
     def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Beginning calibration process")
         # Do vision system calibration
         # Do vacuum calibration
@@ -90,6 +97,10 @@ class FindShelf(State):
     """
 
     def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Moving to shelf")
        
         pose_msg = PoseMessage()
@@ -110,7 +121,6 @@ class FindShelf(State):
         state_complete = True
         return self.next_state(state_complete)
 
-
     def on_event(self, event):
         print("No on-event function for this state")
 
@@ -128,7 +138,11 @@ class AssessShelf(State):
     Class definition for assesing the shelf using the vision system
     """
 
-    def run(self):
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Assessing shelf")
         # Assess shelf - use vision node topic to extract the centroid of the item
 
@@ -142,9 +156,9 @@ class AssessShelf(State):
         # Move to next state when there is a confirmed centroid for the item
         if state_complete:
             print("Assessment complete")
-            return 5 # End
+            return 5  # End
         else:
-            return 4 # Stay in AssessShelf
+            return 4  # Stay in AssessShelf
 
 
 class ServiceCaller:
@@ -227,6 +241,9 @@ class TopicWriter:
 
 
 class StateSupervisor:
+    """
+    Governs transitions between states and acts as scope for all state objects
+    """
 
     def __init__(self):
 
@@ -239,6 +256,11 @@ class StateSupervisor:
         print("State machine started. Current status:", self.status)
 
     def run(self, pipeline_core):
+        """
+        Monitors status and runs relevant states
+        :param pipeline_core: PipelineCore object
+        :return: None
+        """
 
         if self.status == 0:
             self.status = self.state_initialise.run(pipeline_core)
@@ -256,6 +278,9 @@ class StateSupervisor:
 
 
 class PipelineCore:
+    """
+    Handles all persistent data and ROS interfaces
+    """
 
     def __init__(self):
         rospy.init_node("pipeline", anonymous=False)
@@ -267,6 +292,10 @@ class PipelineCore:
 
 
 def run_pipeline():
+    """
+    Instantiates pipeline_core and state_machine objects, and then just spins the state machine
+    :return: None
+    """
     pipeline_core = PipelineCore()
     while not pipeline_core.pose_feedback_subscriber.var:
         rospy.sleep(0.1)
@@ -278,4 +307,3 @@ def run_pipeline():
 
 if __name__ == "__main__":
     run_pipeline()
-    
