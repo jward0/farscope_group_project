@@ -117,12 +117,12 @@ class FindShelf(State):
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
 
-        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.x = -0.05
         shelf_centre_pose.position.y = 0.5
-        shelf_centre_pose.position.z = 0.43
+        shelf_centre_pose.position.z = 0.42
         shelf_centre_pose.orientation.x = 0
         shelf_centre_pose.orientation.y = 0
-        shelf_centre_pose.orientation.z = -0.7071
+        shelf_centre_pose.orientation.z = 0.7071
         shelf_centre_pose.orientation.w = 0.7071
 
         pose_msg.pose = shelf_centre_pose
@@ -134,12 +134,12 @@ class FindShelf(State):
         # Shelf E pick
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.x = -0.05
         shelf_centre_pose.position.y = 0.65
-        shelf_centre_pose.position.z = 0.43
+        shelf_centre_pose.position.z = 0.42
         shelf_centre_pose.orientation.x = 0
         shelf_centre_pose.orientation.y = 0
-        shelf_centre_pose.orientation.z = -0.7071
+        shelf_centre_pose.orientation.z = 0.7071
         shelf_centre_pose.orientation.w = 0.7071
 
         pose_msg.pose = shelf_centre_pose
@@ -353,8 +353,10 @@ def run_pipeline():
     :return: None
     """
     pipeline_core = PipelineCore()
+    print("Waiting for moveit interface to start...")
     while not pipeline_core.pose_feedback_subscriber.var:
         rospy.sleep(0.1)
+    print("Moveit interface started. Starting state machine...")
     state_machine = StateSupervisor()
     while True:
         state_machine.run(pipeline_core)
