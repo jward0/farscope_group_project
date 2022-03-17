@@ -116,7 +116,6 @@ class FindShelf(State):
         # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-
         shelf_centre_pose.position.x = 0.05
         shelf_centre_pose.position.y = 0.5
         shelf_centre_pose.position.z = 0.42
