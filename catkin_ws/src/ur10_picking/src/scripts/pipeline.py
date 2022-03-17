@@ -4,12 +4,10 @@ import copy
 import rospy
 from std_msgs.msg import String
 from std_msgs.msg import Bool
-from geometry_msgs.msg import Pose, PoseArray
-from ur10_picking.msg import PoseMessage
+# from geometry_msgs.msg import Pose, PoseArray
+# from ur10_picking.msg import PoseMessage
 from ur10_picking.srv import *
 
-# Define a global variable for the state machine status:
-state_machine_status = 0
 
 class State:
     """
@@ -18,44 +16,51 @@ class State:
     The class includes state name, on_event, next_state
     """
 
-    def __init__(self, pipeline_core):
-        self.pipeline_core = pipeline_core
+    def __init__(self):
         print("Initiating state:", str(self))
 
-    def run(self):
+    def run(self, pipeline_core):
         assert 0, "run not implemented"
 
     def on_event(self, event):
         assert 0, "on_event not implemented"
 
-    def next_state(self, input):
+    def next_state(self, state_complete):
         assert 0, "next state not implemented"
 
 
 class Initialise(State):
     """
-    Class defintion for the initialisation state
+    Class definition for the initialisation state
         Check nodes are on and topics are publishing
         Prioritisation - list of lists output
     """
 
-    def run(self):
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Initialising the system and prioritising items")
         # TODO: Test node communications
-
         # Do item prioritisation program here (NOT FOR DEMO)
+
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self, input):
-        if input == "Initialisation complete":
-            return True
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Initialisation complete")
+            return 1  # Move to Calibration
         else:
-             return False
+            return 0  # Stay in Initialise
 
 
-class Calibration(State):
+class Calibrate(State):
     """
     Class definition for the calibration state
         Output - binary status of calibration = 1
@@ -64,26 +69,34 @@ class Calibration(State):
         Output - Centroids of each shelf - list or dict of coordinates / Pose for shelf home
     """
 
-    def run(self):
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Beginning calibration process")
-        # NOTE FOR DEMO - no calibration has been setup
         # TODO: do we need vision calibration or UR10 calibration?
         # TODO: Do vision system calibration
 
         # (NOT FOR DEMO) Do vacuum calibration
+        pipeline_core.vacuumcalibration.call("begin vacuum calibration")
+
         # (NOT FOR DEMO) Do robot arm calibration - position relative to shelf
         # (NOT FOR DEMO) Do any other calibration
-        print("Calibration complete")
 
-        # TODO: Move UR10 to home position (HARDCODED FOR DEMO) & confirm position has been reached
-
-        self.next_state()
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self):
-        state_machine_status = 2
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Calibration complete")
+            return 2  # Move to FindShelf
+        else:
+            return 1  # Stay in Initialise
 
 
 class FindShelf(State):
@@ -95,19 +108,41 @@ class FindShelf(State):
         Move UR10 to shelf centre and conform position has been reached
     """
 
-    def run(self):
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
         print("Moving to shelf")
-        # (NOT FOR DEMO) Read item from prioritised list
-        # (NOT FOR DEMO) Identify shelf reference
-        # TODO: Move UR10 to shelf centre (HARDCODED FOR DEMO) & confirm position has been reached
 
-        self.next_state()
+        # pose_msg = PoseMessage()
+        # shelf_centre_pose = Pose()
+        # shelf_centre_pose.position.x = 0.1
+        # shelf_centre_pose.position.y = -0.5
+        # shelf_centre_pose.position.z = 0.3
+        # shelf_centre_pose.orientation.x = 0
+        # shelf_centre_pose.orientation.y = 0
+        # shelf_centre_pose.orientation.z = 0
+
+        # pose_msg.pose = shelf_centre_pose
+        # pose_msg.incremental = False
+
+        # pipeline_core.pose_publisher.write_topic(pose_msg)
+        # rospy.sleep(5.0)
+
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self):
-        state_machine_status = 3
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Shelf found")
+            return 3  # Move to AssessShelf
+        else:
+            return 2  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -117,17 +152,28 @@ class AssessShelf(State):
         Create UR10 trajectory for target extraction of item
     """
 
-    def run(self):
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
+        print("Assessing shelf")
         # TODO: Assess shelf - use vision node topic to extract the centroid of the item
         # TODO: Print centroid of the item to terminal
 
-        self.next_state()
+        state_complete = True
+        return self.next_state(state_complete)
 
     def on_event(self, event):
         print("No on-event function for this state")
 
-    def next_state(self):
-        state_machine_status = 4
+    def next_state(self, state_complete):
+        # Move to next state when there is a confirmed centroid for the item
+        if state_complete:
+            print("Assessment complete")
+            return 4  # End
+        else:
+            return 3  # Stay in AssessShelf
 
 
 class ServiceCaller:
@@ -161,10 +207,10 @@ class ServiceCaller:
 
 class TopicReader:
     """
-        Define topicreaderclass to read data from published ROS topics
-        This class processes data from a ROS topic and returns it
-        :attribute: topic_name - string name of the topic to which data will be published
-        :attribute: data_class - data type / ROS data class for the published data
+    Define topicreaderclass to read data from published ROS topics
+    This class processes data from a ROS topic and returns it
+    :attribute: topic_name - string name of the topic to which data will be published
+    :attribute: data_class - data type / ROS data class for the published data
     """
 
     def __init__(self, topic_name, data_class):
@@ -181,7 +227,7 @@ class TopicReader:
         Sets the self.var variable to the data from the topic
         :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
         """
-        self.var = data.data
+        self.var = data
 
     def read_topic(self):
         """
@@ -195,10 +241,11 @@ class TopicReader:
 
 class TopicWriter:
     """
-    Define topicwriterclass to read data from published ROS topics
+    Define topicreader class to read data from published ROS topics
     This class processes data from a ROS topic and returns it
-    :attribute: topic_name - string name of the topic to which data will be published
-    :attribute: data_class - data type / ROS data class for the published data
+    :attribute: readname: name of the topic to subscribe and read from. Default to "none" if publishing only
+    :attribute: writename: name of the topic to publish and write to. Default to "none" if subscribing only
+    :attribute: read_data_class: data
     """
 
     def __init__(self, topic_name, data_class):
@@ -215,28 +262,65 @@ class TopicWriter:
         self.pub.publish(message)
 
 
+class StateSupervisor:
+    """
+    Governs transitions between states and acts as scope for all state objects
+    """
+
+    def __init__(self):
+
+        self.status = 0
+        self.state_initialise = Initialise()
+        self.state_calibrate = Calibrate()
+        self.state_find_shelf = FindShelf()
+        self.state_assess_shelf = AssessShelf()
+
+        print("State machine started. Current status:", self.status)
+
+    def run(self, pipeline_core):
+        """
+        Monitors status and runs relevant states
+        :param pipeline_core: PipelineCore object
+        :return: None
+        """
+
+        if self.status == 0:
+            self.status = self.state_initialise.run(pipeline_core)
+        if self.status == 1:
+            self.status = self.state_calibrate.run(pipeline_core)
+        if self.status == 2:
+            self.status = self.state_find_shelf.run(pipeline_core)
+        if self.status == 3:
+            self.status = self.state_assess_shelf.run(pipeline_core)
+        if self.status == 4:
+            print("Demo completed")
+
+    def report_status(self):
+        print("Current state: ", self.status)
+
+
 class PipelineCore:
+    """
+    Handles all persistent data and ROS interfaces
+    """
 
     def __init__(self):
         # Initiate Pipeline Node:
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
 
-        # Initiate other nodes using the launch file
-        # TODO: add the launch file here OR just use ROSLAUNCH in the command line prior to running this script
-        # TODO: make sure launch file dependencies are specified as required
-
         # Initiate topics and services:
         # UR10 control:
-        self.current_pose = None
-        self.pose_publisher = TopicWriter('/pipeline/next_cartesian_pose', PoseMessage)
-        self.trajectory_publisher = TopicWriter('/pipeline/cartesian_trajectory', PoseArray)
-        self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
+
+        # self.current_pose = None
+        # self.pose_publisher = TopicWriter('/pipeline/next_cartesian_pose', PoseMessage)
+        # self.trajectory_publisher = TopicWriter('/pipeline/cartesian_trajectory', PoseArray)
+        # self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
 
         # Vision topics and services:
         # TODO: add the vision topics and services
 
-        # Vacuum control:
+        # Vacuum control (commented out for UR10 testing purposes):
         self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
         self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
         self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
@@ -245,54 +329,20 @@ class PipelineCore:
         # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
 
 
-class RunStateSupervisor():
-    """
-    Define state machine supervisor class to manage the transfer from one state from another and output the state machine status
-    :attribute: pipeline_core - input the pipeline_core class to define all ROS communications
-    """
-    def __init__(self):
-        # Initiate states
-        self.initialisation_state = Initialise()
-        self.calibration_state = Calibration()
-        self.findshelf_state = FindShelf()
-        self.assessshelf_state = AssessShelf()
-
-        # Confirm state machine has started
-        print("State machine has started. State machine is no in statea number: ", state_machine_status)
-
-    def run(self):
-        """
-        Basic run of state machine for the purpose of the Demo
-        Note that the actual state machine for the final solution will use a binary state_machine_status
-        """
-        if state_machine_status == 0:
-            self.initialisation_state.run()
-        if state_machine_status == 1:
-            self.calibration_state.run()
-        if state_machine_status == 2:
-            self.findshelf_state.run()
-        if state_machine_status == 3:
-            self.assessshelf_state.run()
-        if state_machine_status == 4:
-            print("Demo completed :)")
-
-    def report_status(self):
-        # TO DO: add code here to decode the state_machine_status and report on the status of the state machine
-        # This will be integrated as based on the binary state_machine_status system that is yet to be implemented
-        print("The state machine is now in state: ", state_machine_status)
-
-
 def run_pipeline():
     """
-    Function to initiate and run the pipeline including state machine supervisor
+    Instantiates pipeline_core and state_machine objects, and then just spins the state machine
+    :return: None
     """
-    pipeline_core = PipelineCore
-    state_machine = RunStateSupervisor
+    rospy.sleep(5.0)
+    pipeline_core = PipelineCore()
+    # while not pipeline_core.pose_feedback_subscriber.var:
+    #    rospy.sleep(0.1)
+    state_machine = StateSupervisor()
     while True:
-        state_machine.run()
-        rospy.spin()
+         state_machine.run(pipeline_core)
+         rospy.spin()
 
 
 if __name__ == "__main__":
     run_pipeline()
-
