@@ -121,7 +121,7 @@ class FindShelf(State):
         shelf_centre_pose.orientation.x = 0
         shelf_centre_pose.orientation.y = 0
         shelf_centre_pose.orientation.z = -0.7071
-        shelf.centre_pose.orientation.w = 0.7071
+        shelf_centre_pose.orientation.w = 0.7071
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
@@ -138,7 +138,7 @@ class FindShelf(State):
         shelf_centre_pose.orientation.x = 0
         shelf_centre_pose.orientation.y = 0
         shelf_centre_pose.orientation.z = -0.7071
-        shelf.centre_pose.orientation.w = 0.7071
+        shelf_centre_pose.orientation.w = 0.7071
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
