@@ -117,13 +117,13 @@ class FindShelf(State):
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
 
-        shelf_centre_pose.position.x = -0.05
+        shelf_centre_pose.position.x = 0.05
         shelf_centre_pose.position.y = 0.5
         shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0
-        shelf_centre_pose.orientation.y = 0
-        shelf_centre_pose.orientation.z = 0.7071
-        shelf_centre_pose.orientation.w = 0.7071
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
+        shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
@@ -134,13 +134,13 @@ class FindShelf(State):
         # Shelf E pick
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = -0.05
+        shelf_centre_pose.position.x = 0.05
         shelf_centre_pose.position.y = 0.65
         shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0
-        shelf_centre_pose.orientation.y = 0
-        shelf_centre_pose.orientation.z = 0.7071
-        shelf_centre_pose.orientation.w = 0.7071
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
+        shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
@@ -153,11 +153,11 @@ class FindShelf(State):
         shelf_centre_pose = Pose()
         shelf_centre_pose.position.x = 0.05
         shelf_centre_pose.position.y = 0.5
-        shelf_centre_pose.position.z = 0.43
-        shelf_centre_pose.orientation.x = 0
-        shelf_centre_pose.orientation.y = 0
-        shelf_centre_pose.orientation.z = -0.7071
-        shelf_centre_pose.orientation.w = 0.7071
+        shelf_centre_pose.position.z = 0.42
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
+        shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
