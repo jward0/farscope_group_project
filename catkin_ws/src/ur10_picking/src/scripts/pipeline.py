@@ -6,6 +6,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
+# from ur10_picking.srv import *
 
 
 class State:
@@ -112,21 +113,40 @@ class FindShelf(State):
         """
         print("Moving to shelf")
 
+        # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.0
-        shelf_centre_pose.position.y = 0.45
-        shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0 
+
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.5
+        shelf_centre_pose.position.z = 0.43
+        shelf_centre_pose.orientation.x = 0
         shelf_centre_pose.orientation.y = 0
         shelf_centre_pose.orientation.z = -0.7071
-        shelf_centre_pose.orientation.w = 0.7071
+        shelf.centre_pose.orientation.w = 0.7071
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(15.0)
+        rospy.sleep(10.0)
+        
+        # Shelf E pick
+        pose_msg = PoseMessage()
+        shelf_centre_pose = Pose()
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.65
+        shelf_centre_pose.position.z = 0.43
+        shelf_centre_pose.orientation.x = 0
+        shelf_centre_pose.orientation.y = 0
+        shelf_centre_pose.orientation.z = -0.7071
+        shelf.centre_pose.orientation.w = 0.7071
+
+        pose_msg.pose = shelf_centre_pose
+        pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(10.0)
 
         state_complete = True
         return self.next_state(state_complete)
