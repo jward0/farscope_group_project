@@ -145,6 +145,23 @@ class FindShelf(State):
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
+        
+        # Shelf E home
+        pose_msg = PoseMessage()
+        shelf_centre_pose = Pose()
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.5
+        shelf_centre_pose.position.z = 0.43
+        shelf_centre_pose.orientation.x = 0
+        shelf_centre_pose.orientation.y = 0
+        shelf_centre_pose.orientation.z = -0.7071
+        shelf_centre_pose.orientation.w = 0.7071
+
+        pose_msg.pose = shelf_centre_pose
+        pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(10.0)
 
         state_complete = True
         return self.next_state(state_complete)
