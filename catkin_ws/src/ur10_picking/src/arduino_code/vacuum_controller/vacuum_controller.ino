@@ -6,8 +6,9 @@
  * 2) Respond to service requests from central controller to turn the vaccum
  *    relay on and off
  *
- * Note that there is a dependency - the vacuum_switch.h header file needs to have been
+ * Note 1 - there is a dependency - the vacuum_switch.h header file needs to have been
  * generated within the UR10_picking package
+ * Note 2 - all pressures are in hPa
  */
 
 #include <ros.h>
@@ -27,8 +28,8 @@
 
 // ---SETUP VACUUM CONTROLLER---
 unsigned long pressure;
-unsigned long baseline_pressure;
-unsigned long sucking_threshold = 100;
+float baseline_pressure = 880.0; //This is overwritten during calibration.
+float sucking_threshold = 30.0;  //This is a manual set threshold value = diff between sucking and not sucking an object
 #define relayPin 2
 #define USEIIC 1
 
@@ -69,7 +70,7 @@ void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::
   if (String(req.input) == "begin vacuum calibration") {
     vacuum(1);
     delay(2000);
-    baseline_pressure = bme.readPressure();
+    baseline_pressure = bme.readPressure()/100.0;
     delay(1000);
     vacuum(0);
     res.output = "vacuum calibration complete - please ensure threshold has been correctly set!";
@@ -140,10 +141,10 @@ void vacuum(bool onoff)
 bool suck_status() 
 {
 /* Function to return the "suck status" of the vacuum
- * Returns 1 if sucking an object and 0 if not
- */
-  pressure = bme.readPressure();
-  if (abs(baseline_pressure - pressure) > sucking_threshold) {
+ * Returns true if sucking an object and false if not
+*/
+  pressure = bme.readPressure()/100.0;
+  if ((baseline_pressure - pressure) > sucking_threshold) {
       return true;
   } else {
       return false;
