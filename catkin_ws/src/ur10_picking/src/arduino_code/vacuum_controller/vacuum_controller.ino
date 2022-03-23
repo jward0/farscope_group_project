@@ -14,14 +14,9 @@
 #include <ros.h>
 #include <Wire.h>
 #include <SPI.h>
-#include <Adafruit_SPIDevice.h>
-#include <Adafruit_I2CRegister.h>
-#include <Adafruit_I2CDevice.h>
-#include <Adafruit_BusIO_Register.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 #include <std_msgs/String.h>
-#include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
 #include <ur10_picking/vacuum_switch.h>
 #include <ur10_picking/vacuum_calibration.h>
@@ -31,28 +26,16 @@ unsigned long pressure;
 float baseline_pressure = 880.0; //This is overwritten during calibration.
 float sucking_threshold = 30.0;
 #define relayPin 2
-#define USEIIC 1
 
 //This Macro definition decide whether you use I2C or SPI
 //When USEIIC is 1 means use I2C interface, When it is 0,use SPI interface
 //Note that the default I2C address is 0x77 but this needs to be checked and updated!
-#if(USEIIC)
-  Adafruit_BME280 bme;
-#else
-  #define SPI_SCK 13
-  #define SPI_MISO 12
-  #define SPI_MOSI 11
-  #define SPI_CS 10
-  Adafruit_BME280 bme(SPI_CS, SPI_MOSI, SPI_MISO, SPI_SCK);
-#endif
-
-unsigned long delayTime;
+Adafruit_BME280 bme;
 
 // ---SETUP ROS---
 // Instantiate the node handle - note reduced settings to save memory:
 // Maximum 2 publishers, 2 subscribers, 128 bytes input and 256 output buffers
-#define __AVR_ATmega8__
-ros::NodeHandle_<ArduinoHardware, 2, 2, 128, 256> nh;
+ros::NodeHandle_<ArduinoHardware, 1, 2, 128, 128> nh;
 
 // Define the vacuum_status publisher which publishes to a topic vacuum_status
 // Pulishes "true" if sucking object and "false" if not sucking an object
@@ -63,9 +46,7 @@ ros::Publisher vacuum_status("vacuum_status", &msg);
 // Takes a string request to begin the calibration routine
 // Returns a string response when complete
 using ur10_picking::vacuum_calibration;
-
 void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::Response & res)
-// NOT WORKING - NEED TO UNDERSTAND SRV STRING INPUTS 
 {
   if (String(req.input) == "begin vacuum calibration") {
     vacuum(1);
@@ -82,7 +63,6 @@ ros::ServiceServer<vacuum_calibration::Request, vacuum_calibration::Response> se
 // Define the service for the vacuum relay
 // Takes a boolean request. 1 to start vacuum. 0 to stop vacuum.
 using ur10_picking::vacuum_switch;
-
 void switch_callback(const vacuum_switch::Request & req, vacuum_switch::Response & res)
 {
   if (req.input == 1) {
@@ -93,21 +73,20 @@ void switch_callback(const vacuum_switch::Request & req, vacuum_switch::Response
     res.output = "vacuum relay switched off"; }
   else {
     res.output = "ERROR: input must be 1 or 0 to turn the vacuum on and off respectively"; }
-
 }
 ros::ServiceServer<vacuum_switch::Request, vacuum_switch::Response> server_s("vacuum_switch",&switch_callback);
-
 
 void setup()
 {
   // Initiate the relay pin
   pinMode(relayPin, OUTPUT);
-    bool rslt;
-    rslt = bme.begin(0x76);  
-    if (!rslt) {
-        while (1);
-    }
-
+  
+  bool rslt;
+  rslt = bme.begin(0x77);  
+  if (!rslt) {
+      // Serial.println("Init Fail,Please Check your address or the wire you connected!!!");
+      while (1);
+  }
 
   // Initiate the ROS node and advertise services and topic
   nh.initNode();
