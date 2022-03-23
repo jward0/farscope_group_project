@@ -16,6 +16,8 @@ from cv_bridge import CvBridge
 
 class Vision_Core(object):
     def __init__(self):
+        """Init function for the main Vision Core system that holds the realsense variables 
+        """
         self.hlow = 15
         self.hhigh = 180
         self.slow = 35
@@ -50,6 +52,8 @@ class Vision_Core(object):
 
     
     def start(self):
+        """Function to start a ROS topics from the vision system (Currently no topics are being published)
+        """
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             
@@ -59,6 +63,14 @@ class Vision_Core(object):
     
 
 def handle_detect_markers(req):
+    """Handler function on service request to detect ARUCO 3D coordinates and their ID
+
+    Args:
+        req (Boolean): Not used boolean but needed for ROS service reqest
+
+    Returns:
+        arucoMarkerArray: An array that holds Marker objects, which in turn holds a geometry_msgs/Point and a marker ID
+    """
     markers = []
 
     frames = vision_core.pipeline.wait_for_frames()
@@ -113,6 +125,14 @@ def handle_detect_markers(req):
     return toReturn
 
 def handle_detect_objects(req):
+    """Detects an object in a shelf 
+
+    Args:
+        req (Boolean): Not used boolean but needed for ROS service reqest
+
+    Returns:
+        geometry_msgs/Point: The 3D point of the object relative to the camera
+    """
     object = Point(0,0,0)
     frames = vision_core.pipeline.wait_for_frames()
     aligned_frames = vision_core.align.process(frames)
@@ -143,6 +163,18 @@ def handle_detect_objects(req):
     return object
 
 def get_shelf(color, depth, corners, ids):
+    """Gets just the pixels of the shelf between the markers
+
+    Args:
+        color (int8 3*w*h array): Color image array from the real sense camera, w and h can be what ever
+        depth (int16 1*w*h array): Depth image array from the real sense camera
+        corners (list): A list containing the corners of the aruco markers 
+        ids (list): A list containing the id of the aruco markers
+    
+    Returns:
+        color (int8 3*w*h array): A aruco cropped image array 
+        depth (int16 1*w*h array): A aruco cropped depth image array
+    """
     mask = np.zeros(color.shape, np.uint8)
     if len(corners) > 0:
 		# flatten the ArUco IDs list
@@ -182,6 +214,15 @@ def get_shelf(color, depth, corners, ids):
     return color, depth
 
 def maskShelf(color_img):
+    """Function to mask the shelf image to contain only the object and remove the background colours
+
+    Args:
+        color_img (int8 3*w*h array): The aruco cropped image of the shelf
+
+    Returns:
+        color_img (int8 3*w*h array): The masked cropped image of the shelf containing only the object
+        mask_background (int8 1*w*h array): The binary image mask that was used.
+    """
     hsv = cv2.cvtColor(color_img, cv2.COLOR_BGR2HSV)
 
     mask_background = cv2.inRange(hsv,(vision_core.hlow,vision_core.slow,vision_core.vlow),(vision_core.hhigh,vision_core.shigh,vision_core.vhigh))
@@ -194,6 +235,15 @@ def maskShelf(color_img):
     return color_img, mask_background
 
 def findContours(img, amount):
+    """A function to find the contours of any image it is given, sorted by the biggest area of the contour
+
+    Args:
+        img (int8 3*w*h array): The input image to detect contours on
+        amount (int): How many contours to return
+
+    Returns:
+        Contour: a list of contours based on area
+    """
     objects = []
 
     contours, hierarchy = cv2.findContours(image=img, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE)
@@ -205,12 +255,31 @@ def findContours(img, amount):
     return contours
 
 def getDepthOfRect(depth, rect):
+    """Returns the depth of a bounding box rect
+
+    Args:
+        depth (_type_): The full depth image from the camera
+        rect (_type_): A bounding box rect
+
+    Returns:
+        depth (depth array): A filted out depth array based on the rect
+    """
     x,y,w,h = rect
     depth = depth[x+w/2,y+h/2].astype(float)
     depth = depth * vision_core.depth_scale
     return depth
 
 def getDepth(point, depth, aligned_depth_frame):
+    """_summary_
+
+    Args:
+        point (x,y Point): The point the depth information is needed of
+        depth (_type_): NOT USED ATM
+        aligned_depth_frame (_type_): NOT USED ATM
+
+    Returns:
+        int: the depth of the requested point using camera intrinsics
+    """
     depth_intrinsic = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
     result = rs.rs2_deproject_pixel_to_point(depth_intrinsic, [point[0], point[1]], depth)
     #result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
@@ -218,6 +287,8 @@ def getDepth(point, depth, aligned_depth_frame):
     return result
 
 def init_ros():
+    """Will start the ros node 'vision_server' and sets up the service handlers
+    """
     rospy.init_node('vision_server')
     markerDetection = rospy.Service('detect_markers', detect_markers, handle_detect_markers)
     detectObject = rospy.Service('detect_object', detect_object, handle_detect_objects)
