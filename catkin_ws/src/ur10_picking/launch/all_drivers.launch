@@ -7,11 +7,6 @@
 		<arg name="limited" default="$(arg limited)"/>
 	</include>
 	
-	<node name="serial_node" pkg="rosserial_python" type="serial_node.py">
-    		<param name="port" value="/dev/ttyUSB0"/>
-    		<param name="baud" value="57600"/>
-    </node>
-	
 	<node name="pipeline" pkg="ur10_picking" type="pipeline.py" output="screen"/>
 	<node name="moveit_interface" pkg="ur10_picking" type="ur10_motion_interface.py" output="screen"/>
 </launch>

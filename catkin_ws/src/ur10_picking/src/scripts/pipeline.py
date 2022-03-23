@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
-from ur10_picking.srv import *
+# from ur10_picking.srv import *
 
 
 class State:
@@ -55,9 +55,9 @@ class Initialise(State):
 
         if state_complete:
             print("Initialisation complete")
-            return 1  # Move to Calibration
+            return 2  # Move to Calibration
         else:
-            return 0  # Stay in Initialise
+            return 1  # Stay in Initialise
 
 
 class Calibrate(State):
@@ -79,9 +79,6 @@ class Calibrate(State):
         # TODO: Do vision system calibration
 
         # (NOT FOR DEMO) Do vacuum calibration
-        # pipeline_core.vacuumcalibration.call("begin vacuum calibration")
-        # print("Vacuum_calibration complete")
-        
         # (NOT FOR DEMO) Do robot arm calibration - position relative to shelf
         # (NOT FOR DEMO) Do any other calibration
 
@@ -95,9 +92,9 @@ class Calibrate(State):
 
         if state_complete:
             print("Calibration complete")
-            return 2  # Move to FindShelf
+            return 3  # Move to FindShelf
         else:
-            return 1  # Stay in Initialise
+            return 2  # Stay in Initialise
 
 
 class FindShelf(State):
@@ -146,12 +143,9 @@ class FindShelf(State):
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
-        
-        # Turn on vacuum
-        pipeline_core.vacuumonoff.call(1)
+
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
-        
         
         # Shelf E home
         pose_msg = PoseMessage()
@@ -169,9 +163,6 @@ class FindShelf(State):
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
-        
-        # Turn off vacuum
-        pipeline_core.vacuumonoff.call(0)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -182,10 +173,10 @@ class FindShelf(State):
     def next_state(self, state_complete):
 
         if state_complete:
-            print("Shelf found, item picked")
-            return 3  # Move to AssessShelf
+            print("Shelf found")
+            return 4  # Move to AssessShelf
         else:
-            return 2  # Stay in FindShelf
+            return 3  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -214,9 +205,9 @@ class AssessShelf(State):
         # Move to next state when there is a confirmed centroid for the item
         if state_complete:
             print("Assessment complete")
-            return 4  # End
+            return 5  # End
         else:
-            return 3  # Stay in AssessShelf
+            return 4  # Stay in AssessShelf
 
 
 class ServiceCaller:
@@ -271,7 +262,7 @@ class TopicReader:
         :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
         """
         self.var = data
-        # print(data)
+        print(data)
 
     def read_topic(self):
         """
@@ -364,9 +355,9 @@ class PipelineCore:
         # TODO: add the vision topics and services
 
         # Vacuum control (commented out for UR10 testing purposes):
-        self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
-        self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
-        self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
+        # self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
+        # self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
+        # self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
 
         # Gripper topics and services:
         # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
