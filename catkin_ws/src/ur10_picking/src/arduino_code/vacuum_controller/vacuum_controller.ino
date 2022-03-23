@@ -11,7 +11,7 @@
  * Note 2 - all pressures are in hPa
  */
 
-#include <ros.h>
+#include <ros.h>#include <ur10_picking/vacuum_switch.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <Adafruit_Sensor.h>
@@ -35,7 +35,7 @@ Adafruit_BME280 bme;
 // ---SETUP ROS---
 // Instantiate the node handle - note reduced settings to save memory:
 // Maximum 2 publishers, 2 subscribers, 128 bytes input and 256 output buffers
-ros::NodeHandle_<ArduinoHardware, 1, 2, 128, 128> nh;
+ros::NodeHandle_<ArduinoHardware, 2, 2, 128, 128> nh;
 
 // Define the vacuum_status publisher which publishes to a topic vacuum_status
 // Pulishes "true" if sucking object and "false" if not sucking an object
@@ -76,23 +76,70 @@ void switch_callback(const vacuum_switch::Request & req, vacuum_switch::Response
 }
 ros::ServiceServer<vacuum_switch::Request, vacuum_switch::Response> server_s("vacuum_switch",&switch_callback);
 
+
 void setup()
 {
   // Initiate the relay pin
   pinMode(relayPin, OUTPUT);
-  
-  bool rslt;
-  rslt = bme.begin(0x77);  
-  if (!rslt) {
-      // Serial.println("Init Fail,Please Check your address or the wire you connected!!!");
-      while (1);
+  // Find the I2C pin (see code from I2C scanner Arduino example)
+  Wire.begin();
+  byte address, error, address_final;
+  int nDevices;
+
+  nDevices = 0;
+  for(address = 1; address < 127; address++ ){
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    Wire.beginTransmission(address);
+    error = Wire.endTransmission();
+
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16)
+        Serial.print("0");
+        Serial.print(address,HEX);
+        Serial.println("  !");
+	address_final = address;
+        nDevices++;
+    }
+    else if (error==4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
   }
+  if (nDevices == 0)
+    Serial.println("No I2C devices found\n");
+  else
+    Serial.println("done\n");
+
+  // Initiate the sensor based on address from the above I2C scan
+  bool rslt;
+  if (address_final == 118) {
+    bool rslt;
+    rslt = bme.begin(0x76);  
+    if (!rslt) {
+        while (1);
+    } 
+  } else if (address_final == 119) {
+    rslt = bme.begin(0x77);  
+    if (!rslt) {
+        while (1);
+    } 
+  } else {
+    Serial.print("Error: I2C address is not within range. Restart arduino and try again");
+  } 
 
   // Initiate the ROS node and advertise services and topic
   nh.initNode();
+  nh.advertise(vacuum_status);
   nh.advertiseService(server_c);
   nh.advertiseService(server_s);
-  nh.advertise(vacuum_status);
+  
 }
 
 void loop()
