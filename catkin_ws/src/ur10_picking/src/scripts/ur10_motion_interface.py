@@ -5,7 +5,8 @@ import moveit_commander
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
 
-class PoseTalker():
+
+class PoseTalker:
 
     def __init__(self, publisher_name):
 
@@ -18,9 +19,13 @@ class PoseTalker():
         self.pub.publish(pose_msg)
 
 
-class MoveitInterface():
+class MoveitInterface:
     
     def __init__(self):
+        """
+        Initialisedsall the various MoveIt things, sets up ROS interfaces, and moves through two initial poses-
+        first, straight upwards to ensure joints aren't twisted, and then to a provisional home pose
+        """
         moveit_commander.roscpp_initialize(sys.argv)
         rospy.init_node('moveit_interface', anonymous=False)
         
@@ -44,6 +49,13 @@ class MoveitInterface():
         rospy.sleep(10.0)
 
     def move_to_pose(self, pose_message):
+        """
+        Sends command to MoveIt to move to a specified Cartesian pose. If pose_message.incremental,
+        determines incremental change to current pose and sends that
+
+        :param pose_message: PoseMessage object (incremental, pose)
+        :return:
+        """
 
         if pose_message.incremental:
             pose = self.move_group.get_current_pose().pose
@@ -59,6 +71,12 @@ class MoveitInterface():
         self.move_group.clear_pose_targets()
 
     def move_trajectory(self, cartesian_trajectory):
+        """
+        Takes a PoseArray input and sends a cartesian path request to MoveIt based on the PoseArray
+
+        :param cartesian_trajectory: PoseArray object containing waypoints for trajectory
+        :return: None
+        """
 
         (plan, fraction) = self.move_group.compute_cartesian_path(
                                                 cartesian_trajectory.poses,
@@ -69,11 +87,16 @@ class MoveitInterface():
         self.move_group.clear_pose_targets()
 
     def feedback(self):
+        """
+        Monitors robot pose and sends back on pose_talker
+
+        :return: None
+        """
     
-        joint_states_temp = self.move_group.get_current_joint_values()
-        print("++++++++++++++++++++++++++++++++++++")
-        print(joint_states_temp)
-        print("++++++++++++++++++++++++++++++++++++")
+        # joint_states_temp = self.move_group.get_current_joint_values()
+        # print("++++++++++++++++++++++++++++++++++++")
+        # print(joint_states_temp)
+        # print("++++++++++++++++++++++++++++++++++++")
         pose = self.move_group.get_current_pose().pose
         self.pose_talker.send(pose)
 
@@ -86,4 +109,3 @@ if __name__ == "__main__":
     while not rospy.is_shutdown():
         interface.feedback()
         rate.sleep()
-
