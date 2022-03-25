@@ -116,7 +116,7 @@ def handle_detect_markers(req):
             print(result_string)
             mark = arucoMarker()
             mark.markerID = markerID
-            mark.point = Point(result[0],result[2],result[1])
+            mark.point = Point(result[0],-result[2],-result[1])
             markers.append(mark)
 
     toReturn = arucoMarkerArray()
