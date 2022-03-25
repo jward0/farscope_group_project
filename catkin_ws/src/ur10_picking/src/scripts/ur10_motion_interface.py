@@ -2,9 +2,11 @@
 import rospy
 import sys
 import moveit_commander
-from geometry_msgs.msg import Pose, PoseArray
+from geometry_msgs.msg import Pose, PoseArray, TransformStamped
 from ur10_picking.msg import PoseMessage
 
+import tf_conversions
+import tf2_ros
 
 class PoseTalker:
 
@@ -23,7 +25,7 @@ class MoveitInterface:
     
     def __init__(self):
         """
-        Initialisedsall the various MoveIt things, sets up ROS interfaces, and moves through two initial poses-
+        Initialises all the various MoveIt things, sets up ROS interfaces, and moves through two initial poses-
         first, straight upwards to ensure joints aren't twisted, and then to a provisional home pose
         """
         moveit_commander.roscpp_initialize(sys.argv)
@@ -36,6 +38,8 @@ class MoveitInterface:
         self.pose_talker = PoseTalker('/moveit_interface/cartesian_pose_feedback')
         self.pose_sub = rospy.Subscriber('/pipeline/next_cartesian_pose', PoseMessage, self.move_to_pose)
         self.trajectory_sub = rospy.Subscriber('/pipeline/cartesian_trajectory', PoseArray, self.move_trajectory)
+
+        self.br = tf2_ros.TransformBroadcaster()
 
         self.move_group.set_joint_value_target([1.571, -1.571, 0.0, 0.0, 0.0, 0.0])
         self.move_group.go(wait=True)
@@ -89,7 +93,7 @@ class MoveitInterface:
     def feedback(self):
         """
         Monitors robot pose and sends back on pose_talker
-
+        Also publishes to tf2 as a frame
         :return: None
         """
     
@@ -99,6 +103,17 @@ class MoveitInterface:
         # print("++++++++++++++++++++++++++++++++++++")
         pose = self.move_group.get_current_pose().pose
         self.pose_talker.send(pose)
+        print(pose)     
+        t = TransformStamped()
+        t.header.stamp = rospy.Time.now()
+        t.header.frame_id = "world"
+        t.child_frame_id = "wrist_centre"
+        t.transform.translation.x = pose.position.x
+        t.transform.translation.y = pose.position.y
+        t.transform.translation.z = pose.position.z
+        t.transform.rotation = pose.orientation
+
+        self.br.sendTransform(t)
 
 
 if __name__ == "__main__":

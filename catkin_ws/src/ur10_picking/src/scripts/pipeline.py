@@ -2,11 +2,14 @@
 
 import copy
 import rospy
+from geometry_msgs.msg import Pose, PoseArray, PoseStamped
 from std_msgs.msg import String
 from std_msgs.msg import Bool
-from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
 from ur10_picking.srv import *
+
+import tf2_ros
+import tf2_geometry_msgs
 
 
 class State:
@@ -216,6 +219,41 @@ class AssessShelf(State):
             return 4  # Stay in AssessShelf
 
 
+class SpinState(State):
+
+    def run(self, pipeline_core):
+
+        print("Listening for transform...")
+
+        try:
+            transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
+            
+            sample_pose_stamped = PoseStamped()
+            sample_pose_stamped.header.stamp = rospy.Time.now()
+            sample_pose_stamped.pose.orientation.w = 1.0
+            pose_transformed = tf2_geometry_msgs.do_transform_pose(sample_pose_stamped, transform)
+            print(pose_transformed.pose)
+            print("***************************")
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityExecption, tf2_ros.ExtrapolationException):
+            print("Not found!")
+            rospy.sleep(1.0)
+
+        return self.next_state(False)
+            
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Finished spinning")
+            return 5
+        else:
+            return 999  # Stay in SpinState
+
+
 class ServiceCaller:
     """
     Define service class
@@ -310,11 +348,12 @@ class StateSupervisor:
 
     def __init__(self):
 
-        self.status = 0
+        self.status = 999
         self.state_initialise = Initialise()
         self.state_calibrate = Calibrate()
         self.state_find_shelf = FindShelf()
         self.state_assess_shelf = AssessShelf()
+        self.state_spin = SpinState()
 
         print("State machine started. Current status:", self.status)
 
@@ -335,6 +374,8 @@ class StateSupervisor:
             self.status = self.state_assess_shelf.run(pipeline_core)
         if self.status == 4:
             print("Demo completed")
+        if self.status == 999:
+            self.status = self.state_spin.run(pipeline_core)
 
     def report_status(self):
         print("Current state: ", self.status)
@@ -356,6 +397,8 @@ class PipelineCore:
         self.pose_publisher = TopicWriter('/pipeline/next_cartesian_pose', PoseMessage)
         self.trajectory_publisher = TopicWriter('/pipeline/cartesian_trajectory', PoseArray)
         self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
+        self.tf_buffer = tf2_ros.Buffer(rospy.Duration(100.0))
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         # Vision topics and services:
         # TODO: add the vision topics and services
@@ -382,7 +425,8 @@ def run_pipeline():
     state_machine = StateSupervisor()
     while True:
         state_machine.run(pipeline_core)
-        rospy.spin()
+        state_machine.report_status()
+        rospy.sleep(5.0)
 
 
 if __name__ == "__main__":
