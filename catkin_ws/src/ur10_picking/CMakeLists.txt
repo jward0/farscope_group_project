@@ -56,12 +56,13 @@ add_message_files(
    PoseMessage.msg 
  )
 
-
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
    detect_markers.srv
    detect_object.srv
+   vacuum_calibration.srv
+   vacuum_switch.srv
  )
 
 ## Generate actions in the 'action' folder

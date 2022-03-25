@@ -127,6 +127,9 @@ class FindShelf(State):
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
 
+        # Turn on vacuum
+	pipeline_core.vacuumonoff.call(1)
+
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
         
@@ -145,8 +148,8 @@ class FindShelf(State):
         pose_msg.incremental = False
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(10.0)
-        
+        rospy.sleep(10.0)	
+
         # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
@@ -163,6 +166,9 @@ class FindShelf(State):
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
+
+	# Turn off vacuum
+	pipeline_core.vacuumonoff.call(0)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -355,9 +361,9 @@ class PipelineCore:
         # TODO: add the vision topics and services
 
         # Vacuum control (commented out for UR10 testing purposes):
-        # self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
-        # self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
-        # self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
+        self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
+        self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
+        self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
 
         # Gripper topics and services:
         # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
