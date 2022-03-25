@@ -56,7 +56,7 @@ void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::
     vacuum(0);
     res.output = "vacuum calibration complete";
   } else {
-    res.output = req.input; }
+    res.output = "Error: calibration not completed try again"; }
 }
 ros::ServiceServer<vacuum_calibration::Request, vacuum_calibration::Response> server_c("vacuum_calibration",&cali_callback);
 
