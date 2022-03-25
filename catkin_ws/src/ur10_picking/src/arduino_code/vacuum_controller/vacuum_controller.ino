@@ -48,7 +48,7 @@ ros::Publisher vacuum_status("vacuum_status", &msg);
 using ur10_picking::vacuum_calibration;
 void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::Response & res)
 {
-  if (String(req.input) == "start_vacuum_calibration") {
+  if (req.input == 1) {
     vacuum(1);
     delay(2000);
     baseline_pressure = bme.readPressure()/100.0;
