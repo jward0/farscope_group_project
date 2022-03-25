@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
-# from ur10_picking.srv import *
+from ur10_picking.srv import *
 
 
 class State:
