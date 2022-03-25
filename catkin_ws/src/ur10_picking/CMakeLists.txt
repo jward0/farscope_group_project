@@ -50,16 +50,19 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-  FILES
-  PoseMessage.msg   
-)
+   FILES
+   arucoMarker.msg
+   arucoMarkerArray.msg
+   PoseMessage.msg 
+ )
+
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+ add_service_files(
+   FILES
+   detect_markers.srv
+   detect_object.srv
+ )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -70,10 +73,11 @@ add_message_files(
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
-  DEPENDENCIES
-  std_msgs
-  geometry_msgs
-)
+   DEPENDENCIES
+   std_msgs
+   geometry_msgs
+ )
+
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
