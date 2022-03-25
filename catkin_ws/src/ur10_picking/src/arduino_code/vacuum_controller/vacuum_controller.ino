@@ -22,7 +22,7 @@
 #include <ur10_picking/vacuum_calibration.h>
 
 // ---SETUP VACUUM CONTROLLER---
-unsigned long pressure;
+float pressure;
 float baseline_pressure = 880.0; //This is overwritten during calibration.
 float sucking_threshold = 30.0;
 #define relayPin 2
@@ -35,7 +35,7 @@ Adafruit_BME280 bme;
 // ---SETUP ROS---
 // Instantiate the node handle - note reduced settings to save memory:
 // Maximum 2 publishers, 2 subscribers, 128 bytes input and 256 output buffers
-ros::NodeHandle_<ArduinoHardware, 2, 2, 128, 128> nh;
+ros::NodeHandle_<ArduinoHardware, 2, 4, 150, 150> nh;
 
 // Define the vacuum_status publisher which publishes to a topic vacuum_status
 // Pulishes "true" if sucking object and "false" if not sucking an object
@@ -48,13 +48,13 @@ ros::Publisher vacuum_status("vacuum_status", &msg);
 using ur10_picking::vacuum_calibration;
 void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::Response & res)
 {
-  if (String(req.input) == "begin vacuum calibration") {
+  if (String(req.input) == "start_vacuum_calibration") {
     vacuum(1);
     delay(2000);
     baseline_pressure = bme.readPressure()/100.0;
     delay(1000);
     vacuum(0);
-    res.output = "vacuum calibration complete - please ensure threshold has been correctly set!";
+    res.output = "vacuum calibration complete";
   } else {
     res.output = req.input; }
 }
@@ -67,10 +67,12 @@ void switch_callback(const vacuum_switch::Request & req, vacuum_switch::Response
 {
   if (req.input == 1) {
     vacuum(1);
-    res.output = "vacuum relay switched on"; }
+    delay(100);
+    res.output = "vac_on"; }
   else if (req.input == 0) {
     vacuum(0);
-    res.output = "vacuum relay switched off"; }
+    delay(100);
+    res.output = "vac_off"; }
   else {
     res.output = "ERROR: input must be 1 or 0 to turn the vacuum on and off respectively"; }
 }
@@ -137,8 +139,10 @@ void setup()
   // Initiate the ROS node and advertise services and topic
   nh.initNode();
   nh.advertise(vacuum_status);
-  nh.advertiseService(server_c);
+  delay(100);
   nh.advertiseService(server_s);
+  delay(1000);
+  nh.advertiseService(server_c);
   
 }
 
