@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
+import copy
 import rospy
 from geometry_msgs.msg import Pose, PoseArray, PoseStamped
+from std_msgs.msg import String
+from std_msgs.msg import Bool
 from ur10_picking.msg import PoseMessage
+from ur10_picking.srv import *
 
 import tf2_ros
 import tf2_geometry_msgs
@@ -30,10 +34,9 @@ class State:
 
 class Initialise(State):
     """
-    Class defintion for the initialisation state
-    Run launch file
-    Turn on and check nodes are on and topics are publishing
-    Prioritisation - list of lists output
+    Class definition for the initialisation state
+        Check nodes are on and topics are publishing
+        Prioritisation - list of lists output
     """
 
     def run(self, pipeline_core):
@@ -42,8 +45,9 @@ class Initialise(State):
         :return: integer ID of next state
         """
         print("Initialising the system and prioritising items")
-        # Do item initiation program here
-        # Do item prioritisation program here
+        # TODO: Test node communications
+        # Do item prioritisation program here (NOT FOR DEMO)
+
         state_complete = True
         return self.next_state(state_complete)
 
@@ -62,10 +66,10 @@ class Initialise(State):
 class Calibrate(State):
     """
     Class definition for the calibration state
-    Output - binary status of calibration = 1
-    Output - Home position - hard coded - move to home
-    output - Bin position - xyz
-    Output - Centroids of each shelf - list or dict of coordinates / Pose for shelf home
+        Output - binary status of calibration = 1
+        Output - Home position - hard coded - move to home
+        Output - Bin position - xyz
+        Output - Centroids of each shelf - list or dict of coordinates / Pose for shelf home
     """
 
     def run(self, pipeline_core):
@@ -74,11 +78,13 @@ class Calibrate(State):
         :return: integer ID of next state
         """
         print("Beginning calibration process")
-        # Do vision system calibration
-        # Do vacuum calibration
-        
-        # Do robot arm calibration - position relative to shelf
-        # Do any other calibration
+        # TODO: do we need vision calibration or UR10 calibration?
+        # TODO: Do vision system calibration
+
+        # (NOT FOR DEMO) Do vacuum calibration
+        # (NOT FOR DEMO) Do robot arm calibration - position relative to shelf
+        # (NOT FOR DEMO) Do any other calibration
+
         state_complete = True
         return self.next_state(state_complete)
 
@@ -97,6 +103,10 @@ class Calibrate(State):
 class FindShelf(State):
     """
     Class definition for the FindShelf state
+        Read item from the prioritised list
+        Identify shelf reference
+        Identify retrieval mechanism
+        Move UR10 to shelf centre and conform position has been reached
     """
 
     def run(self, pipeline_core):
@@ -105,21 +115,63 @@ class FindShelf(State):
         :return: integer ID of next state
         """
         print("Moving to shelf")
-       
+
+        # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.1
-        shelf_centre_pose.position.y = -0.5
-        shelf_centre_pose.position.z = 0.3
-        shelf_centre_pose.orientation.x = 0
-        shelf_centre_pose.orientation.y = 0
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.5
+        shelf_centre_pose.position.z = 0.42
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
         shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
+
+        pose_msg.pose = shelf_centre_pose
+        pose_msg.incremental = False
+
+        # Turn on vacuum
+	pipeline_core.vacuumonoff.call(1)
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(10.0)
+        
+        # Shelf E pick
+        pose_msg = PoseMessage()
+        shelf_centre_pose = Pose()
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.65
+        shelf_centre_pose.position.z = 0.42
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
+        shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(5.0)
+        rospy.sleep(10.0)	
+
+        # Shelf E home
+        pose_msg = PoseMessage()
+        shelf_centre_pose = Pose()
+        shelf_centre_pose.position.x = 0.05
+        shelf_centre_pose.position.y = 0.5
+        shelf_centre_pose.position.z = 0.42
+        shelf_centre_pose.orientation.x = 0.7071
+        shelf_centre_pose.orientation.y = 0.7071
+        shelf_centre_pose.orientation.z = 0
+        shelf_centre_pose.orientation.w = 0
+
+        pose_msg.pose = shelf_centre_pose
+        pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(10.0)
+
+	# Turn off vacuum
+	pipeline_core.vacuumonoff.call(0)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -128,7 +180,7 @@ class FindShelf(State):
         print("No on-event function for this state")
 
     def next_state(self, state_complete):
-        
+
         if state_complete:
             print("Shelf found")
             return 4  # Move to AssessShelf
@@ -139,6 +191,8 @@ class FindShelf(State):
 class AssessShelf(State):
     """
     Class definition for assesing the shelf using the vision system
+        Use vision node to extract the centroid of the item
+        Create UR10 trajectory for target extraction of item
     """
 
     def run(self, pipeline_core):
@@ -147,7 +201,8 @@ class AssessShelf(State):
         :return: integer ID of next state
         """
         print("Assessing shelf")
-        # Assess shelf - use vision node topic to extract the centroid of the item
+        # TODO: Assess shelf - use vision node topic to extract the centroid of the item
+        # TODO: Print centroid of the item to terminal
 
         state_complete = True
         return self.next_state(state_complete)
@@ -229,6 +284,13 @@ class ServiceCaller:
 
 
 class TopicReader:
+    """
+    Define topicreaderclass to read data from published ROS topics
+    This class processes data from a ROS topic and returns it
+    :attribute: topic_name - string name of the topic to which data will be published
+    :attribute: data_class - data type / ROS data class for the published data
+    """
+
     def __init__(self, topic_name, data_class):
         self.var = None
         self.topic_name = topic_name
@@ -244,6 +306,7 @@ class TopicReader:
         :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
         """
         self.var = data
+        print(data)
 
     def read_topic(self):
         """
@@ -324,14 +387,29 @@ class PipelineCore:
     """
 
     def __init__(self):
+        # Initiate Pipeline Node:
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
+
+        # Initiate topics and services:
+        # UR10 control:
         self.current_pose = None
         self.pose_publisher = TopicWriter('/pipeline/next_cartesian_pose', PoseMessage)
         self.trajectory_publisher = TopicWriter('/pipeline/cartesian_trajectory', PoseArray)
         self.pose_feedback_subscriber = TopicReader('/moveit_interface/cartesian_pose_feedback', PoseMessage)
         self.tf_buffer = tf2_ros.Buffer(rospy.Duration(100.0))
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        # Vision topics and services:
+        # TODO: add the vision topics and services
+
+        # Vacuum control (commented out for UR10 testing purposes):
+        self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
+        self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
+        self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
+
+        # Gripper topics and services:
+        # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
 
 
 def run_pipeline():
@@ -340,8 +418,10 @@ def run_pipeline():
     :return: None
     """
     pipeline_core = PipelineCore()
+    print("Waiting for moveit interface to start...")
     while not pipeline_core.pose_feedback_subscriber.var:
         rospy.sleep(0.1)
+    print("Moveit interface started. Starting state machine...")
     state_machine = StateSupervisor()
     while True:
         state_machine.run(pipeline_core)
