@@ -13,6 +13,8 @@ import pyrealsense2 as rs
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 
+import os
+
 
 class Vision_Core(object):
     def __init__(self):
@@ -128,11 +130,13 @@ def handle_detect_objects(req):
     """Detects an object in a shelf 
 
     Args:
-        req (Boolean): Not used boolean but needed for ROS service reqest
+        req (String): Not used boolean but needed for ROS service reqest
 
     Returns:
         geometry_msgs/Point: The 3D point of the object relative to the camera
     """
+    object_name = req.object_name
+
     object = Point(0,0,0)
     frames = vision_core.pipeline.wait_for_frames()
     aligned_frames = vision_core.align.process(frames)
@@ -148,6 +152,20 @@ def handle_detect_objects(req):
     (corners, ids, rejected) = cv2.aruco.detectMarkers(color_image, vision_core.arucoDict, parameters=vision_core.arucoParmas)
     shelf_image, shelf_image_depth = get_shelf(color_image, depth_image,corners, ids)
     maskedShelf, maskedShelf_mask = maskShelf(shelf_image)
+
+    img2 = cv2.cvtColor(maskedShelf, cv2.COLOR_BGR2GRAY)
+    directory = "/Users/gjosse/Documents/Git/farscope_group_project/catkin_ws/src/ur10_picking/src/scripts/data/eraser"
+
+    polys = []
+    for filename in os.listdir(directory):
+        f = os.path.join(directory, filename)
+        # checking if it is a file
+        if os.path.isfile(f):
+            img1 = cv2.imread(f,0)
+            polyPoints = getPoly(img1, img2)
+            polys.append(polyPoints)
+
+    
 
     contours = findContours(maskedShelf_mask, 1)
 
@@ -285,6 +303,41 @@ def getDepth(point, depth, aligned_depth_frame):
     #result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
 
     return result
+
+def getPoly(img1, img2):
+    MIN_MATCH_COUNT = 10
+
+    # Initiate SIFT detector
+    sift = cv2.SIFT_create()
+
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1,None)
+    kp2, des2 = sift.detectAndCompute(img2,None)
+
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    search_params = dict(checks = 50)
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+    matches = flann.knnMatch(des1,des2,k=2)
+
+    # store all the good matches as per Lowe's ratio test.
+    good = []
+    for m,n in matches:
+        if m.distance < 0.5*n.distance:
+            good.append(m)
+
+    if len(good)>MIN_MATCH_COUNT:
+        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
+        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC,5.0)
+        matchesMask = mask.ravel().tolist()
+        h,w = img1.shape
+        pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
+        dst = cv2.perspectiveTransform(pts,M)
+        return [np.int32(dst)]
+    else:
+        return None
 
 def init_ros():
     """Will start the ros node 'vision_server' and sets up the service handlers
