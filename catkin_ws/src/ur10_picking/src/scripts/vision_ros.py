@@ -154,7 +154,7 @@ def handle_detect_objects(req):
     maskedShelf, maskedShelf_mask = maskShelf(shelf_image)
 
     img2 = cv2.cvtColor(maskedShelf, cv2.COLOR_BGR2GRAY)
-    directory = "/Users/gjosse/Documents/Git/farscope_group_project/catkin_ws/src/ur10_picking/src/scripts/data/eraser"
+    directory = "/home/farscope/farscope_group_project/catkin_ws/src/ur10_picking/src/scripts/data/" + object_name
 
     polys = []
     for filename in os.listdir(directory):
@@ -164,16 +164,14 @@ def handle_detect_objects(req):
             img1 = cv2.imread(f,0)
             polyPoints = getPoly(img1, img2)
             polys.append(polyPoints)
-
     
+    for p in polys:
+        if p:
+            center = np.mean(np.squeeze(p), axis=0)
 
-    contours = findContours(maskedShelf_mask, 1)
-
-    for c in contours:
-            rect = cv2.boundingRect(c)
-            x,y,w,h = rect
-            depthLevel = getDepthOfRect(depth_image,rect)
-            coords = getDepth([x+w/2, w+h/2], depthLevel, aligned_depth_frame)
+            depth_image = depth_image.astype(float)
+            depth_image = depth_image * vision_core.depth_scale
+            coords = getDepth([int(center[0]), int(center[1])], depth_image, aligned_depth_frame)
             print("Detected Objects")
             print(coords)
             object = Point(coords[0], coords[1], coords[2])
@@ -334,7 +332,10 @@ def getPoly(img1, img2):
         matchesMask = mask.ravel().tolist()
         h,w = img1.shape
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-        dst = cv2.perspectiveTransform(pts,M)
+        try:
+            dst = cv2.perspectiveTransform(pts,M)
+        except:
+            return None;
         return [np.int32(dst)]
     else:
         return None
@@ -350,6 +351,7 @@ def init_ros():
 
 if __name__ == "__main__":
     global vision_core
+    print(cv2.__version__)
     init_ros()
 
     vision_core = Vision_Core()
