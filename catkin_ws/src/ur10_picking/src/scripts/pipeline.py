@@ -115,7 +115,30 @@ class FindShelf(State):
         :return: integer ID of next state
         """
         print("Moving to shelf")
+        
+        try:
+            # Transform from camera pose to EE pose
+            transform = pipeline_core.tf_buffer.lookup_transform('camera', 'ee_link',  rospy.Time())
+        
+            # Desired camera pose in world frame
+            shelf_assess_pose_stamped = PoseStamped()
+            shelf_assess_pose_stamped.stamp = rospy.Time.now()
+            shelf_assess_pose_stamped.position.x = 0.05
+            shelf_assess_pose_stamped.position.y = 0.5
+            shelf_assess_pose_stamped.position.z = 0.85
+            shelf.assess_pose_stamped.orientation.x = 0.7071
+            shelf_assess_pose_stamped.orientation.y = 0.7071
+            shelf_assess_pose_stamped.orientation.z = 0
+            shelf_assess_pose_stamped.orientation.w = 0
 
+            pose_transformed = tf2_geometry_msgs.do_transform_pose(shelf_assess_pose_stamped, transform)
+        
+        except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            print("Failed!")
+            rospy.sleep(1.0)
+
+
+        '''
         # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
@@ -163,13 +186,13 @@ class FindShelf(State):
         shelf_centre_pose.orientation.y = 0.7071
         shelf_centre_pose.orientation.z = 0
         shelf_centre_pose.orientation.w = 0
-
+        
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
 
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
-
+        '''
 	# Turn off vacuum
 	pipeline_core.vacuumonoff.call(0)
 
