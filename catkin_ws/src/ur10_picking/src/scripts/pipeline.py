@@ -2,7 +2,7 @@
 
 import copy
 import rospy
-from geometry_msgs.msg import Pose, PoseArray, PoseStamped
+from geometry_msgs.msg import Pose, PoseArray, PoseStamped, Vector3
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 from ur10_picking.msg import PoseMessage
@@ -10,6 +10,8 @@ from ur10_picking.srv import *
 
 import tf2_ros
 import tf2_geometry_msgs
+import tf
+from tf import transformations as ts
 
 
 class State:
@@ -115,44 +117,64 @@ class FindShelf(State):
         :return: integer ID of next state
         """
         print("Moving to shelf")
-        
+        ''' 
         try:
             # Transform from camera pose to EE pose
-            transform = pipeline_core.tf_buffer.lookup_transform('camera', 'ee_link',  rospy.Time())
-        
+            old_transform = pipeline_core.tf_buffer.lookup_transform('camera', 'ee_link',  rospy.Time())
+            transform_to_world_frame = pipeline_core.tf_buffer.lookup_transform('ee_link', 'world', rospy.Time())
+
+            zero_vector = Vector3()
+            zero_vector.x = 0
+            zero_vector.y = 0
+            zero_vector.z = 0
+            transform_to_world_frame.transform.translation = zero_vector
+
+            transform = tf2_geometry_msgs.do_transform_pose(old_transform, transform_to_world_frame)
+            
             # Desired camera pose in world frame
             shelf_assess_pose_stamped = PoseStamped()
-            shelf_assess_pose_stamped.stamp = rospy.Time.now()
-            shelf_assess_pose_stamped.position.x = 0.05
-            shelf_assess_pose_stamped.position.y = 0.5
-            shelf_assess_pose_stamped.position.z = 0.85
-            shelf.assess_pose_stamped.orientation.x = 0.7071
-            shelf_assess_pose_stamped.orientation.y = 0.7071
-            shelf_assess_pose_stamped.orientation.z = 0
-            shelf_assess_pose_stamped.orientation.w = 0
+            shelf_assess_pose_stamped.header.stamp = rospy.Time.now()
+            shelf_assess_pose_stamped.pose.position.x = 0.05
+            shelf_assess_pose_stamped.pose.position.y = 0.85
+            shelf_assess_pose_stamped.pose.position.z = 0.42
+            shelf_assess_pose_stamped.pose.orientation.x = 0.7071
+            shelf_assess_pose_stamped.pose.orientation.y = 0.7071
+            shelf_assess_pose_stamped.pose.orientation.z = 0
+            shelf_assess_pose_stamped.pose.orientation.w = 0
 
             pose_transformed = tf2_geometry_msgs.do_transform_pose(shelf_assess_pose_stamped, transform)
-        
+            print("&&&&&&&&&&&&&&&&&")
+            print(pose_transformed.pose)
+            print("&&&&&&&&&&&&&&&&&")
+            pose_msg = PoseMessage()
+            pose_msg.incremental = False
+            pose_msg.pose = pose_transformed.pose
+            pipeline_core.pose_publisher.write_topic(pose_msg)
+            rospy.sleep(10.0)
+
         except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             print("Failed!")
             rospy.sleep(1.0)
 
 
         '''
+
         # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
         shelf_centre_pose.position.x = 0.05
         shelf_centre_pose.position.y = 0.5
-        shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0.7071
-        shelf_centre_pose.orientation.y = 0.7071
-        shelf_centre_pose.orientation.z = 0
-        shelf_centre_pose.orientation.w = 0
+        shelf_centre_pose.position.z = 0.65
+        shelf_centre_pose.orientation.x = 0.6964
+        shelf_centre_pose.orientation.y = 0.6964
+        shelf_centre_pose.orientation.z = -0.1227
+        shelf_centre_pose.orientation.w = 0.1227
 
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
-
+        pipeline_core.pose_publisher.write_topic(pose_msg) 
+        rospy.sleep(10.0)
+        '''
         # Turn on vacuum
 	pipeline_core.vacuumonoff.call(1)
 
@@ -371,7 +393,7 @@ class StateSupervisor:
 
     def __init__(self):
 
-        self.status = 999
+        self.status = 0
         self.state_initialise = Initialise()
         self.state_calibrate = Calibrate()
         self.state_find_shelf = FindShelf()
