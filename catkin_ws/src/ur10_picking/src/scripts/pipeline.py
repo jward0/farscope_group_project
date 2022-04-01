@@ -7,6 +7,7 @@ from std_msgs.msg import Bool
 from geometry_msgs.msg import Pose, PoseArray
 from ur10_picking.msg import PoseMessage
 from ur10_picking.srv import *
+from prioritise import *
 
 
 class State:
@@ -50,6 +51,11 @@ class Initialise(State):
         # TODO: Check arm has iniitiated and is in shelf home
 
         # TODO: Check prioritised item list has been populated
+        # Function imported from priortise.py
+        json_object = import_json()
+        pipeline_core.bin_contents = json_object["bin_contents"]
+        pipeline_core.work_order = json_object["work_order"]
+        work_order_prioritised = prioritise_items(bin_contents, work_order)
 
         # TODO: Test node communications
 
@@ -275,7 +281,14 @@ class PipelineCore:
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
 
-        # TODO: create the priortised item list of dictionaries (from Tj's program)
+        # TODO: create the prioritised item list of dictionaries (from Tj's program)
+        # Imported from prioritise.py
+        self.all_items = all_items
+        self.item_profile = item_profiles
+        self.bin_profiles = bin_profiles
+        self.bin_contents = None # Might not need to be shared to all states
+        self.work_order = None # Might not need to be shared to all states.
+        self.work_order_prioritised = None
 
         # Initiate topics and services:
         # UR10 control:
