@@ -60,9 +60,9 @@ class Initialise(State):
 
         if state_complete:
             print("Initialisation complete")
-            return 2  # Move to Calibration
+            return 1  # Move to Calibration
         else:
-            return 1  # Stay in Initialise
+            return 0  # Stay in Initialise
 
 
 class Calibrate(State):
@@ -97,9 +97,9 @@ class Calibrate(State):
 
         if state_complete:
             print("Calibration complete")
-            return 3  # Move to FindShelf
+            return 2  # Move to FindShelf
         else:
-            return 2  # Stay in Initialise
+            return 1  # Stay in Initialise
 
 
 class FindShelf(State):
@@ -117,53 +117,12 @@ class FindShelf(State):
         :return: integer ID of next state
         """
         print("Moving to shelf")
-        ''' 
-        try:
-            # Transform from camera pose to EE pose
-            old_transform = pipeline_core.tf_buffer.lookup_transform('camera', 'ee_link',  rospy.Time())
-            transform_to_world_frame = pipeline_core.tf_buffer.lookup_transform('ee_link', 'world', rospy.Time())
-
-            zero_vector = Vector3()
-            zero_vector.x = 0
-            zero_vector.y = 0
-            zero_vector.z = 0
-            transform_to_world_frame.transform.translation = zero_vector
-
-            transform = tf2_geometry_msgs.do_transform_pose(old_transform, transform_to_world_frame)
-            
-            # Desired camera pose in world frame
-            shelf_assess_pose_stamped = PoseStamped()
-            shelf_assess_pose_stamped.header.stamp = rospy.Time.now()
-            shelf_assess_pose_stamped.pose.position.x = 0.05
-            shelf_assess_pose_stamped.pose.position.y = 0.85
-            shelf_assess_pose_stamped.pose.position.z = 0.42
-            shelf_assess_pose_stamped.pose.orientation.x = 0.7071
-            shelf_assess_pose_stamped.pose.orientation.y = 0.7071
-            shelf_assess_pose_stamped.pose.orientation.z = 0
-            shelf_assess_pose_stamped.pose.orientation.w = 0
-
-            pose_transformed = tf2_geometry_msgs.do_transform_pose(shelf_assess_pose_stamped, transform)
-            print("&&&&&&&&&&&&&&&&&")
-            print(pose_transformed.pose)
-            print("&&&&&&&&&&&&&&&&&")
-            pose_msg = PoseMessage()
-            pose_msg.incremental = False
-            pose_msg.pose = pose_transformed.pose
-            pipeline_core.pose_publisher.write_topic(pose_msg)
-            rospy.sleep(10.0)
-
-        except(tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            print("Failed!")
-            rospy.sleep(1.0)
-
-
-        '''
-
+        
         # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.05
-        shelf_centre_pose.position.y = 0.5
+        shelf_centre_pose.position.x = 0
+        shelf_centre_pose.position.y = 0.4
         shelf_centre_pose.position.z = 0.65
         shelf_centre_pose.orientation.x = 0.6964
         shelf_centre_pose.orientation.y = 0.6964
@@ -228,9 +187,9 @@ class FindShelf(State):
 
         if state_complete:
             print("Shelf found")
-            return 4  # Move to AssessShelf
+            return 3  # Move to AssessShelf
         else:
-            return 3  # Stay in FindShelf
+            return 2  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -246,9 +205,24 @@ class AssessShelf(State):
         :return: integer ID of next state
         """
         print("Assessing shelf")
-        # TODO: Assess shelf - use vision node topic to extract the centroid of the item
-        # TODO: Print centroid of the item to terminal
+        object_xyz = pipeline_core.get_object_centroid.call(True)
+        print("Object centroid in camera frame:")
+        print(object_xyz)
 
+        transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
+        object_pose = PoseStamped()
+        object_pose.header.stamp = rospy.Time.now()
+        object_pose.pose.position = object_xyz.object
+
+        target_pose = tf2_geometry_msgs.do_transform_pose(object_pose, transform)
+        target_pose.pose.orientation.x = 0.7071
+        target_pose.pose.orientation.y = 0.7071
+        target_pose.pose.orientation.z = 0
+        target_pose.pose.orientation.w = 0
+
+        print("Grip pose in world frame:")
+        print(target_pose)
+        
         state_complete = True
         return self.next_state(state_complete)
 
@@ -259,9 +233,9 @@ class AssessShelf(State):
         # Move to next state when there is a confirmed centroid for the item
         if state_complete:
             print("Assessment complete")
-            return 5  # End
+            return 4  # End
         else:
-            return 4  # Stay in AssessShelf
+            return 3  # Stay in AssessShelf
 
 
 class SpinState(State):
@@ -446,7 +420,7 @@ class PipelineCore:
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
 
         # Vision topics and services:
-        # TODO: add the vision topics and services
+        self.get_object_centroid = ServiceCaller("detect_object", detect_object)
 
         # Vacuum control (commented out for UR10 testing purposes):
         self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)

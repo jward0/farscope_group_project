@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from ur10_picking.srv import detect_markers
 from ur10_picking.srv import detect_object
 from ur10_picking.msg import arucoMarker
@@ -116,7 +118,8 @@ def handle_detect_markers(req):
             print(result_string)
             mark = arucoMarker()
             mark.markerID = markerID
-            mark.point = Point(result[0],result[2],-result[1])
+            # mark.point = Point(result[0],result[2],-result[1])
+            mark.point = Point(result[2], result[0], result[1])
             markers.append(mark)
 
     toReturn = arucoMarkerArray()
@@ -158,8 +161,9 @@ def handle_detect_objects(req):
             coords = getDepth([x+w/2, w+h/2], depthLevel, aligned_depth_frame)
             print("Detected Objects")
             print(coords)
-            object = Point(coords[0], coords[2], -coords[1])
-    
+            # object = Point(coords[0], coords[2], -coords[1])
+            object = Point(coords[2], coords[0], coords[1]) 
+            
     return object
 
 def get_shelf(color, depth, corners, ids):
