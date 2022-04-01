@@ -119,7 +119,7 @@ def handle_detect_markers(req):
             mark = arucoMarker()
             mark.markerID = markerID
             # mark.point = Point(result[0],result[2],-result[1])
-            mark.point = Point(result[2], result[0], result[1])
+            mark.point = Point(result[2], result[0], -result[1])
             markers.append(mark)
 
     toReturn = arucoMarkerArray()
@@ -162,7 +162,7 @@ def handle_detect_objects(req):
             print("Detected Objects")
             print(coords)
             # object = Point(coords[0], coords[2], -coords[1])
-            object = Point(coords[2], coords[0], coords[1]) 
+            object = Point(coords[2], coords[0], -coords[1]) 
             
     return object
 

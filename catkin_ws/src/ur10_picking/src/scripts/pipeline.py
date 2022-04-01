@@ -222,7 +222,9 @@ class AssessShelf(State):
 
         print("Grip pose in world frame:")
         print(target_pose)
-        
+    
+        pipeline_core.stored_pose = target_pose.pose
+
         state_complete = True
         return self.next_state(state_complete)
 
@@ -233,9 +235,82 @@ class AssessShelf(State):
         # Move to next state when there is a confirmed centroid for the item
         if state_complete:
             print("Assessment complete")
-            return 4  # End
+            return 4  # DoGrip
         else:
             return 3  # Stay in AssessShelf
+
+
+class DoGrip(State):
+    """
+    Do grip
+    """
+
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
+
+        print("Attempting grip")
+        
+        # Shelf E pick home
+
+        pick_home_pose_msg = PoseMessage()
+        pick_home = Pose()
+        pick_home.position.x = 0.05
+        pick_home.position.y = 0.5
+        pick_home.position.z = 0.42
+        pick_home.orientation.x = 0.7071
+        pick_home.orientation.y = 0.7071
+        pick_home.orientation.z = 0
+        pick_home.orientation.w = 0
+
+        pick_home_pose_msg.pose = pick_home
+        pick_home_pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+        rospy.sleep(10.0)
+
+        # Attempt grip
+
+        pose_msg = PoseMessage()
+        pose_msg.pose = pipeline_core.stored_pose
+        pose_msg.pose.position.y -= 0.65
+        pose_msg.incremental = False
+
+        pipeline_core.vacuumonoff.call(1)
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(10.0)
+
+        # Lift 2cm
+        
+        pose_msg = PoseMessage()
+        pose_msg.pose.position.z = 0.02
+        pose_msg.incremental = True
+
+        pipeline_core.pose_publisher.write_topic(pose_msg)
+        rospy.sleep(2.0)
+
+        # Return to pick home
+
+        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+        rospy.sleep(10.0)
+
+        pipeline_core.vacuumonoff.call(0)
+
+        state_complete = True
+        return self.next_state(state_complete)
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Grip attempt finished")
+            return 5 # Done
+        else:
+            return 4 # Stay in DoGrip
 
 
 class SpinState(State):
@@ -372,6 +447,7 @@ class StateSupervisor:
         self.state_calibrate = Calibrate()
         self.state_find_shelf = FindShelf()
         self.state_assess_shelf = AssessShelf()
+        self.state_do_grip = DoGrip()
         self.state_spin = SpinState()
 
         print("State machine started. Current status:", self.status)
@@ -392,6 +468,8 @@ class StateSupervisor:
         if self.status == 3:
             self.status = self.state_assess_shelf.run(pipeline_core)
         if self.status == 4:
+            self.status = self.state_do_grip.run(pipeline_core)
+        if self.status == 5:
             print("Demo completed")
         if self.status == 999:
             self.status = self.state_spin.run(pipeline_core)
@@ -426,6 +504,9 @@ class PipelineCore:
         self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
         self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
         self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
+
+        # Scratch space for pose logging between states:
+        self.stored_pose = Pose()
 
         # Gripper topics and services:
         # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
