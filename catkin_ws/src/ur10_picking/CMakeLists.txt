@@ -63,6 +63,7 @@ add_message_files(
    detect_object.srv
    vacuum_calibration.srv
    vacuum_switch.srv
+   limit_switch.srv
  )
 
 ## Generate actions in the 'action' folder
