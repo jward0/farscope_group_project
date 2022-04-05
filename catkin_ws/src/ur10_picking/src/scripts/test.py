@@ -52,7 +52,7 @@ class Vision_Core(object):
         self.arucoDict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
         self.arucoParmas = cv2.aruco.DetectorParameters_create()
 
-    
+
     def start(self):
         """Function to start a ROS topics from the vision system (Currently no topics are being published)
         """
@@ -179,7 +179,7 @@ if __name__ == "__main__":
 
     vision_core = Vision_Core()
 
-    object_name = "eraser"
+    object_name = "expo_dry_erase_board_eraser"
 
     for x in range(60):
         vision_core.pipeline.wait_for_frames()
