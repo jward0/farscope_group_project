@@ -5,6 +5,7 @@ from ur10_picking.srv import detect_object
 from ur10_picking.msg import arucoMarker
 from ur10_picking.msg import arucoMarkerArray
 from geometry_msgs.msg import Point
+from PIL import Image as ImageDisplay
 
 import rospy
 
@@ -136,20 +137,27 @@ def handle_detect_objects(req):
     Returns:
         geometry_msgs/Point: The 3D point of the object relative to the camera
     """
+
     object = Point(0,0,0)
+    
+    for x in range(10):
+        frames = vision_core.pipeline.wait_for_frames()
+        
     frames = vision_core.pipeline.wait_for_frames()
     aligned_frames = vision_core.align.process(frames)
     aligned_depth_frame = aligned_frames.get_depth_frame()
     color_frame = aligned_frames.get_color_frame()
     
-    for x in range(5):
-        vision_core.pipeline.wait_for_frames()
-
+  
     depth_image = np.asanyarray(aligned_depth_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
 
     (corners, ids, rejected) = cv2.aruco.detectMarkers(color_image, vision_core.arucoDict, parameters=vision_core.arucoParmas)
     shelf_image, shelf_image_depth = get_shelf(color_image, depth_image,corners, ids)
+    
+    # Added for image
+    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(shelf_image_depth, alpha=0.1), cv2.COLORMAP_HSV)
+    
     maskedShelf, maskedShelf_mask = maskShelf(shelf_image)
 
     contours = findContours(maskedShelf_mask, 1)
@@ -158,11 +166,30 @@ def handle_detect_objects(req):
             rect = cv2.boundingRect(c)
             x,y,w,h = rect
             depthLevel = getDepthOfRect(depth_image,rect)
-            coords = getDepth([x+w/2, w+h/2], depthLevel, aligned_depth_frame)
-            print("Detected Objects")
-            print(coords)
+            print("Input from getDepth:")
+            print(x+w/2)
+            print(y+h/2)
+            print("Output from getDepth:")
+            coords = getDepth([x+w/2, y+h/2], depthLevel, aligned_depth_frame)
             # object = Point(coords[0], coords[2], -coords[1])
-            object = Point(coords[2], coords[0], -coords[1]) 
+            object = Point(coords[2], coords[0], -coords[1])
+            print("Detected Objects from vision_ros:")
+            print(object)
+            
+    # Take an image using OpenCV of what the camera is seeing at this pick
+            comx, comy = c.mean(axis=0)[0]
+            cv2.rectangle(color_image, rect, (0,0,255),4)
+            cv2.putText(color_image, str(object), (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)  
+            cv2.circle(color_image, (int(comx),int(comy)), 4, (0,255,0), -1)
+            cv2.circle(color_image, (int(x+w/2),int(y+h/2)), 4, (0,0,255), -1)
+            cv2.drawContours(color_image, c, -1, (255, 0, 0), 4)
+    
+    com = np.hstack((color_image, maskedShelf))
+    com = np.hstack((com, depth_colormap))
+    cv2.imwrite('/home/farscope/Desktop/camera_see.jpg',com)
+    im = ImageDisplay.open(r"/home/farscope/Desktop/camera_see.jpg")
+    im.show()
+    
             
     return object
 
@@ -287,6 +314,7 @@ def getDepth(point, depth, aligned_depth_frame):
     depth_intrinsic = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
     result = rs.rs2_deproject_pixel_to_point(depth_intrinsic, [point[0], point[1]], depth)
     #result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
+    print(result)
 
     return result
 
