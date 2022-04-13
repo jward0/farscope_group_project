@@ -58,10 +58,10 @@ class Initialise(State):
 
         # TODO: Check prioritised item list has been populated
         # Function imported from priortise.py
-        json_object = import_json('apc_pick_test.json')
+        json_object = import_json('/home/farscope/farscope_group_project/catkin_ws/src/ur10_picking/src/scripts/apc_pick_test.json')
         pipeline_core.bin_contents = json_object["bin_contents"]
         pipeline_core.work_order = json_object["work_order"]
-        pipeline_core.work_order_prioritised = prioritise_items(bin_contents, work_order)
+        pipeline_core.work_order_prioritised = prioritise_items(pipeline_core.bin_contents, pipeline_core.work_order)
 
         # TODO: Test node communications
 
@@ -112,7 +112,7 @@ class Calibrate(State):
 
         if state_complete:
             print("Calibration complete")
-            return 0b01011000000000  # Move to FindShelf
+            return 0b10011000000000  # Move to FindShelf
         else:
             return 0b10010000000000  # Stay in Calibration
 
@@ -133,15 +133,17 @@ class FindShelf(State):
         """
 
         pipeline_core.target_shelf = pipeline_core.work_order_prioritised[0]["bin"]
+        print("New target shelf:")
+        print(pipeline_core.target_shelf)
 
         print("Moving to shelf")
         
-        # Shelf E assess home
+        # Shelf assess home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0
-        shelf_centre_pose.position.y = 0.4
-        shelf_centre_pose.position.z = 0.65
+        shelf_centre_pose.position.x = 0 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+        shelf_centre_pose.position.y = 0.4 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+        shelf_centre_pose.position.z = 0.65 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
         shelf_centre_pose.orientation.x = 0.6964
         shelf_centre_pose.orientation.y = 0.6964
         shelf_centre_pose.orientation.z = -0.1227
@@ -165,7 +167,7 @@ class FindShelf(State):
             print("Shelf found")
             return 0b01011000000000  # Move to AssessShelf
         else:
-            return 0b01011000000000  # Stay in FindShelf
+            return 0b10011000000000  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -181,7 +183,7 @@ class AssessShelf(State):
         :return: integer ID of next state
         """
         print("Assessing shelf")
-        object_xyz = pipeline_core.get_object_centroid.call("bin_E")
+        object_xyz = pipeline_core.get_object_centroid.call(pipeline_core.target_shelf)
 
         transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
         object_pose = PoseStamped()
@@ -209,7 +211,7 @@ class AssessShelf(State):
         # Move to next state when there is a confirmed centroid for the item
         if state_complete == "Item found":
             print("Assessment complete - item found")
-            return 0b01011110000000  # End
+            return 0b01011110000000  # DoGrip
         if state_complete == "Item not found":
             print("Assessment complete - item not found")
             return 0b01011100000000  # Go to work order management to update priority list
@@ -232,9 +234,9 @@ class DoGrip(State):
         print("Attempting grip")
         pick_home_pose_msg = PoseMessage()
         pick_home = Pose()
-        pick_home.position.x = 0.05
-        pick_home.position.y = 0.5
-        pick_home.position.z = 0.42
+        pick_home.position.x = 0.05 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+        pick_home.position.y = 0.5 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+        pick_home.position.z = 0.42 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
         pick_home.orientation.x = 0.7071
         pick_home.orientation.y = 0.7071
         pick_home.orientation.z = 0
@@ -288,9 +290,41 @@ class DoGrip(State):
 
         if state_complete:
             print("Grip attempt finished")
-            return 5 # Done
+            return 0b01011110101010 # Go to Work Order Management
         else:
-            return 4 # Stay in DoGrip
+            return 0b01011110000000 # Stay in DoGrip
+            
+
+class WorkOrderManagement(State):
+    """
+    Update work order
+    """
+
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
+        
+        pipeline_core.work_order_prioritised.pop(0)
+        
+        if len(pipeline_core.work_order_prioritised) != 0:
+            state_complete = True
+        else:
+            state_complete = False
+
+        return self.next_state(state_complete)
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, state_complete):
+
+        if state_complete:
+            print("Work order updated")
+            return 0b10011000000000 # Back to FindShelf
+        else:
+            return 5 # Complete
 
 
 class SpinState(State):
@@ -429,6 +463,7 @@ class StateSupervisor:
         self.state_find_shelf = FindShelf()
         self.state_assess_shelf = AssessShelf()
         self.state_do_grip = DoGrip()
+        self.state_work_order_management = WorkOrderManagement()
         self.state_spin = SpinState()
 
         print("State machine started. Current status:", self.status)
@@ -450,6 +485,8 @@ class StateSupervisor:
             self.status = self.state_assess_shelf.run(pipeline_core)
         if self.status == 0b01011110000000:
             self.status = self.state_do_grip.run(pipeline_core)
+        if self.status in (0b01011110101010, 0b01011100000000):
+            self.status = self.state_work_order_management.run(pipeline_core)
         else:
             print("End of pipeline code so far")
 

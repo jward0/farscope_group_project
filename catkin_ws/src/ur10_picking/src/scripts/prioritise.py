@@ -56,18 +56,18 @@ item_profiles = {"feline_greenies_dental_treats": {"hookability": 1, "suckabilit
                  }
 # z diff is ~32cm
 # y diff is ~27cm
-bin_profiles = {"bin_A": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": -27.0, "z": 32.0}},
-                "bin_B": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": 32.0}},
-                "bin_C": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": 27.0, "z": 32.0}},
-                "bin_D": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": -27.0, "z": 0.00}},
+bin_profiles = {"bin_A": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": -0.27, "z": 0.32}},
+                "bin_B": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": 0.32}},
+                "bin_C": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": 0.27, "z": 0.32}},
+                "bin_D": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": -0.27, "z": 0.00}},
                 "bin_E": {"location_score": 3/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": 0.00}},
-                "bin_F": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 27.0, "z": 0.00}},
-                "bin_G": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": -27.0, "z": -32.0}},
-                "bin_H": {"location_score": 3/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": -32.0}},
-                "bin_I": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 27.0, "z": -32.0}},
-                "bin_J": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": -27.0, "z": 64.0}},
-                "bin_K": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": 64.0}},
-                "bin_L": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": 27.0, "z": 64.0}}
+                "bin_F": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.27, "z": 0.00}},
+                "bin_G": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": -0.27, "z": -0.32}},
+                "bin_H": {"location_score": 3/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": -0.32}},
+                "bin_I": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.27, "z": -0.32}},
+                "bin_J": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": -0.27, "z": 0.64}},
+                "bin_K": {"location_score": 2/4, "shelf_offset": {"x": 0.0, "y": 0.00, "z": 0.64}},
+                "bin_L": {"location_score": 1/4, "shelf_offset": {"x": 0.0, "y": 0.27, "z": 0.64}}
                 }
 
 
@@ -79,8 +79,8 @@ def import_json(filename):
 
     json_bin_contents = json_object["bin_contents"]
     json_work_order = json_object["work_order"]
-    print(f' The imported bin_contents is {json_bin_contents}')
-    print(f' The imported work_order is {json_work_order}')
+    #print(f' The imported bin_contents is {json_bin_contents}')
+    #print(f' The imported work_order is {json_work_order}')
     return json_object
 
 
@@ -107,9 +107,9 @@ def prioritise_items(items, order):
 
     # print(work_order)
 
-    prioritised_order = sorted(work_order, key=lambda item: item["score"], reverse=True)
+    prioritised_order = sorted(order, key=lambda item: item["score"], reverse=True)
 
-    print(order)
+    #print(order)
 
     return prioritised_order
 
