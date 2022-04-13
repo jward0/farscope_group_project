@@ -118,7 +118,8 @@ class FindShelf(State):
         """
         print("Moving to shelf")
         
-        # Shelf E home
+                        
+        # Shelf E assess home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
         shelf_centre_pose.position.x = 0
@@ -128,55 +129,15 @@ class FindShelf(State):
         shelf_centre_pose.orientation.y = 0.6964
         shelf_centre_pose.orientation.z = -0.1227
         shelf_centre_pose.orientation.w = 0.1227
-
+        
+                       
+        # Go to shelf      
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
         pipeline_core.pose_publisher.write_topic(pose_msg) 
         rospy.sleep(10.0)
-        '''
-        # Turn on vacuum
-	pipeline_core.vacuumonoff.call(1)
-
-        pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(10.0)
         
-        # Shelf E pick
-        pose_msg = PoseMessage()
-        shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.05
-        shelf_centre_pose.position.y = 0.65
-        shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0.7071
-        shelf_centre_pose.orientation.y = 0.7071
-        shelf_centre_pose.orientation.z = 0
-        shelf_centre_pose.orientation.w = 0
-
-        pose_msg.pose = shelf_centre_pose
-        pose_msg.incremental = False
-
-        pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(10.0)	
-
-        # Shelf E home
-        pose_msg = PoseMessage()
-        shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0.05
-        shelf_centre_pose.position.y = 0.5
-        shelf_centre_pose.position.z = 0.42
-        shelf_centre_pose.orientation.x = 0.7071
-        shelf_centre_pose.orientation.y = 0.7071
-        shelf_centre_pose.orientation.z = 0
-        shelf_centre_pose.orientation.w = 0
         
-        pose_msg.pose = shelf_centre_pose
-        pose_msg.incremental = False
-
-        pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(10.0)
-        '''
-	# Turn off vacuum
-	pipeline_core.vacuumonoff.call(0)
-
         state_complete = True
         return self.next_state(state_complete)
 
@@ -206,8 +167,6 @@ class AssessShelf(State):
         """
         print("Assessing shelf")
         object_xyz = pipeline_core.get_object_centroid.call(True)
-        print("Object centroid in camera frame:")
-        print(object_xyz)
 
         transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
         object_pose = PoseStamped()
@@ -219,7 +178,7 @@ class AssessShelf(State):
         target_pose.pose.orientation.y = 0.7071
         target_pose.pose.orientation.z = 0
         target_pose.pose.orientation.w = 0
-
+        
         print("Grip pose in world frame:")
         print(target_pose)
     
@@ -253,8 +212,9 @@ class DoGrip(State):
 
         print("Attempting grip")
         
+        
         # Shelf E pick home
-
+        
         pick_home_pose_msg = PoseMessage()
         pick_home = Pose()
         pick_home.position.x = 0.05
@@ -267,15 +227,20 @@ class DoGrip(State):
 
         pick_home_pose_msg.pose = pick_home
         pick_home_pose_msg.incremental = False
-
+        
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
         rospy.sleep(10.0)
+        
 
         # Attempt grip
 
         pose_msg = PoseMessage()
         pose_msg.pose = pipeline_core.stored_pose
+        # Translate the pose from periscope suction cup to end effector
+        # Suction cup is 0.65m from the end of the end effector
+        # Suction cup has 0.05m sag from the end effector due to pipe flex
         pose_msg.pose.position.y -= 0.65
+        pose_msg.pose.position.z += 0.05
         pose_msg.incremental = False
 
         pipeline_core.vacuumonoff.call(1)

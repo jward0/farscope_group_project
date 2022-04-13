@@ -143,10 +143,10 @@ def handle_detect_objects(req):
     for x in range(10):
         frames = vision_core.pipeline.wait_for_frames()
         
-    frames = vision_core.pipeline.wait_for_frames()
-    aligned_frames = vision_core.align.process(frames)
-    aligned_depth_frame = aligned_frames.get_depth_frame()
-    color_frame = aligned_frames.get_color_frame()
+    frames = vision_core.pipeline.wait_for_frames() # Receive frame data from camera
+    aligned_frames = vision_core.align.process(frames) # Align frames in line with the colour camera
+    aligned_depth_frame = aligned_frames.get_depth_frame() # rs2 function to retrieve the first depth frame (adds depth to video frames)
+    color_frame = aligned_frames.get_color_frame() # rs2 function to retrieve the first colour frame (adds colour to video frames)
     
   
     depth_image = np.asanyarray(aligned_depth_frame.get_data())
@@ -172,7 +172,7 @@ def handle_detect_objects(req):
             print("Output from getDepth:")
             coords = getDepth([x+w/2, y+h/2], depthLevel, aligned_depth_frame)
             # object = Point(coords[0], coords[2], -coords[1])
-            object = Point(coords[2], coords[0], -coords[1])
+            object = Point(coords[2], coords[0], coords[1])
             print("Detected Objects from vision_ros:")
             print(object)
             
