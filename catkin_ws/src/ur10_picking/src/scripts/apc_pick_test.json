@@ -1,0 +1,62 @@
+{
+    "bin_contents": {
+        "bin_A": [
+            "feline_greenies_dental_treats",
+            "oreo_mega_stuf"
+        ],
+        "bin_B": [
+            "kong_air_dog_squeakair_tennis_ball",
+            "mark_twain_huckleberry_finn"
+        ],
+        "bin_C": [
+            "highland_6539_self_stick_notes",
+            "rolodex_jumbo_pencil_cup",
+            "munchkin_white_hot_duck_bath_toy"
+        ],
+        "bin_D": [
+            "crayola_64_ct"
+        ],
+        "bin_E": [
+            "expo_dry_erase_board_eraser"
+        ],
+        "bin_F": [
+            "dr_browns_bottle_brush",
+            "kong_duck_dog_toy",
+            "kong_sitting_frog_dog_toy"
+        ],
+        "bin_G": [
+            "cheezit_big_original"
+        ],
+        "bin_H": [
+            "paper_mate_12_count_mirado_black_warrior"
+        ],
+        "bin_I": [
+            "champion_copper_plus_spark_plug",
+            "laugh_out_loud_joke_book"
+        ],
+        "bin_J": [
+            "mead_index_cards",
+            "safety_works_safety_glasses",
+            "elmers_washable_no_run_school_glue"
+        ],
+        "bin_K": [
+            "kyjen_squeakin_eggs_plush_puppies",
+            "first_years_take_and_toss_straw_cup",
+            "stanley_66_052",
+            "mommys_helper_outlet_plugs"
+        ],
+        "bin_L": [
+            "genuine_joe_plastic_stir_sticks"
+        ]
+    },
+    "work_order": [
+        {
+            "bin": "bin_E",
+            "item": "expo_dry_erase_board_eraser"
+        },
+        {
+            "bin": "bin_D",
+            "item": "crayola_64_ct"
+        }
+    ]
+}

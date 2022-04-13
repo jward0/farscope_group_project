@@ -48,7 +48,7 @@ ros::Publisher vacuum_status("vacuum_status", &msg);
 using ur10_picking::vacuum_calibration;
 void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::Response & res)
 {
-  if (String(req.input) == "start_vacuum_calibration") {
+  if (req.input == 1) {
     vacuum(1);
     delay(2000);
     baseline_pressure = bme.readPressure()/100.0;
@@ -56,7 +56,7 @@ void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::
     vacuum(0);
     res.output = "vacuum calibration complete";
   } else {
-    res.output = req.input; }
+    res.output = "Error: calibration not completed try again"; }
 }
 ros::ServiceServer<vacuum_calibration::Request, vacuum_calibration::Response> server_c("vacuum_calibration",&cali_callback);
 
