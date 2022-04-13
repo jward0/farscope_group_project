@@ -137,7 +137,8 @@ def handle_detect_objects(req):
     Returns:
         geometry_msgs/Point: The 3D point of the object relative to the camera
     """
-
+    
+    shelf = req.shelf
     object = Point(0,0,0)
     
     for x in range(10):
@@ -153,7 +154,7 @@ def handle_detect_objects(req):
     color_image = np.asanyarray(color_frame.get_data())
 
     (corners, ids, rejected) = cv2.aruco.detectMarkers(color_image, vision_core.arucoDict, parameters=vision_core.arucoParmas)
-    shelf_image, shelf_image_depth = get_shelf(color_image, depth_image,corners, ids)
+    shelf_image, shelf_image_depth = get_shelf(shelf, color_image, depth_image,corners, ids)
     
     # Added for image
     depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(shelf_image_depth, alpha=0.1), cv2.COLORMAP_HSV)
@@ -193,7 +194,7 @@ def handle_detect_objects(req):
             
     return object
 
-def get_shelf(color, depth, corners, ids):
+def get_shelf(shelf, color, depth, corners, ids):
     """Gets just the pixels of the shelf between the markers
 
     Args:
@@ -207,6 +208,22 @@ def get_shelf(color, depth, corners, ids):
         depth (int16 1*w*h array): A aruco cropped depth image array
     """
     mask = np.zeros(color.shape, np.uint8)
+    # Define dictionary containing the arucoIDs for each bin
+    bin_markers = {"bin_A": [],
+                   "bin_B": [],
+                   "bin_C": [],
+                   "bin_D": [4, 0, 5, 2],
+                   "bin_E": [0, 1, 2, 3],
+                   "bin_F": [],
+                   "bin_G": [],
+                   "bin_H": [],
+                   "bin_I": [],
+                   "bin_J": [],
+                   "bin_K": [],
+                   "bin_L": []
+                 }
+    arucoIDs = bin_markers[shelf]
+                
     if len(corners) > 0:
 		# flatten the ArUco IDs list
         ids = ids.flatten()
@@ -223,13 +240,13 @@ def get_shelf(color, depth, corners, ids):
 			# ArUco marker
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-            if markerID == 0:
+            if markerID == arucoIDs[0]:
                 markerCenters[markerID] = [bottomRight[0], bottomRight[1]]
-            if markerID == 1:
+            if markerID == arucoIDs[1]:
                 markerCenters[markerID] = [bottomLeft[0], bottomLeft[1]]
-            if markerID == 2:
+            if markerID == arucoIDs[2]:
                 markerCenters[markerID] = [topRight[0], topRight[1]]
-            if markerID == 3:
+            if markerID == arucoIDs[3]:
                 markerCenters[markerID] = [topLeft[0], topLeft[1]]
 
             cv2.circle(color, (cX, cY), 4, (0, 0, 255), -1)
