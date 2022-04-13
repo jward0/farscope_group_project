@@ -135,8 +135,8 @@ class FindShelf(State):
         pipeline_core.target_shelf = pipeline_core.work_order_prioritised[0]["bin"]
 
         print("Moving to shelf")
-
-        # Shelf E home
+        
+        # Shelf E assess home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
         shelf_centre_pose.position.x = 0
@@ -147,13 +147,11 @@ class FindShelf(State):
         shelf_centre_pose.orientation.z = -0.1227
         shelf_centre_pose.orientation.w = 0.1227
 
-
         # Go to shelf
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
-        
 
         state_complete = True
         return self.next_state(state_complete)
@@ -183,7 +181,7 @@ class AssessShelf(State):
         :return: integer ID of next state
         """
         print("Assessing shelf")
-        object_xyz = pipeline_core.get_object_centroid.call(True)
+        object_xyz = pipeline_core.get_object_centroid.call("bin_E")
 
         transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
         object_pose = PoseStamped()
@@ -232,10 +230,6 @@ class DoGrip(State):
         """
 
         print("Attempting grip")
-
-
-        # Shelf E pick home
-
         pick_home_pose_msg = PoseMessage()
         pick_home = Pose()
         pick_home.position.x = 0.05
@@ -245,7 +239,7 @@ class DoGrip(State):
         pick_home.orientation.y = 0.7071
         pick_home.orientation.z = 0
         pick_home.orientation.w = 0
-
+        
         pick_home_pose_msg.pose = pick_home
         pick_home_pose_msg.incremental = False
 
