@@ -3,10 +3,12 @@
 import copy
 import rospy
 from geometry_msgs.msg import Pose, PoseArray, PoseStamped, Vector3
+from roscomm import ServiceCaller, TopicReader, TopicWriter
 from std_msgs.msg import String
 from std_msgs.msg import Bool
 from ur10_picking.msg import PoseMessage
 from ur10_picking.srv import *
+from prioritise import *
 
 import tf2_ros
 import tf2_geometry_msgs
@@ -19,10 +21,14 @@ class State:
     Define statemachine class
     Each state will be initiated using this class.
     The class includes state name, on_event, next_state
+    :param: pipeline_core: pipeline_core class containing all pipeline data needed for states
+    :param: event: event causing change to the state
+    :param: state_status: binary status number to used to update state machine status
     """
 
     def __init__(self):
         print("Initiating state:", str(self))
+        self.state_status = 0b00000000000000
 
     def run(self, pipeline_core):
         assert 0, "run not implemented"
@@ -47,8 +53,17 @@ class Initialise(State):
         :return: integer ID of next state
         """
         print("Initialising the system and prioritising items")
+
+        # TODO: Check arm has iniitiated and is in shelf home
+
+        # TODO: Check prioritised item list has been populated
+        # Function imported from priortise.py
+        json_object = import_json('apc_pick_test.json')
+        pipeline_core.bin_contents = json_object["bin_contents"]
+        pipeline_core.work_order = json_object["work_order"]
+        pipeline_core.work_order_prioritised = prioritise_items(bin_contents, work_order)
+
         # TODO: Test node communications
-        # Do item prioritisation program here (NOT FOR DEMO)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -60,9 +75,9 @@ class Initialise(State):
 
         if state_complete:
             print("Initialisation complete")
-            return 1  # Move to Calibration
+            return 0b10010000000000  # Move to Calibration
         else:
-            return 0  # Stay in Initialise
+            return 0b00000000000000  # Stay in Initialise
 
 
 class Calibrate(State):
@@ -97,9 +112,9 @@ class Calibrate(State):
 
         if state_complete:
             print("Calibration complete")
-            return 2  # Move to FindShelf
+            return 0b01011000000000  # Move to FindShelf
         else:
-            return 1  # Stay in Initialise
+            return 0b10010000000000  # Stay in Calibration
 
 
 class FindShelf(State):
@@ -116,10 +131,12 @@ class FindShelf(State):
         :param pipeline_core: PipelineCore object
         :return: integer ID of next state
         """
+
+        pipeline_core.target_shelf = pipeline_core.work_order_prioritised[0]["bin"]
+
         print("Moving to shelf")
-        
-                        
-        # Shelf E assess home
+
+        # Shelf E home
         pose_msg = PoseMessage()
         shelf_centre_pose = Pose()
         shelf_centre_pose.position.x = 0
@@ -129,15 +146,15 @@ class FindShelf(State):
         shelf_centre_pose.orientation.y = 0.6964
         shelf_centre_pose.orientation.z = -0.1227
         shelf_centre_pose.orientation.w = 0.1227
-        
-                       
-        # Go to shelf      
+
+
+        # Go to shelf
         pose_msg.pose = shelf_centre_pose
         pose_msg.incremental = False
-        pipeline_core.pose_publisher.write_topic(pose_msg) 
+        pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
         
-        
+
         state_complete = True
         return self.next_state(state_complete)
 
@@ -148,9 +165,9 @@ class FindShelf(State):
 
         if state_complete:
             print("Shelf found")
-            return 3  # Move to AssessShelf
+            return 0b01011000000000  # Move to AssessShelf
         else:
-            return 2  # Stay in FindShelf
+            return 0b01011000000000  # Stay in FindShelf
 
 
 class AssessShelf(State):
@@ -178,13 +195,13 @@ class AssessShelf(State):
         target_pose.pose.orientation.y = 0.7071
         target_pose.pose.orientation.z = 0
         target_pose.pose.orientation.w = 0
-        
+
         print("Grip pose in world frame:")
         print(target_pose)
-    
+
         pipeline_core.stored_pose = target_pose.pose
 
-        state_complete = True
+        state_complete = "Item found"
         return self.next_state(state_complete)
 
     def on_event(self, event):
@@ -192,11 +209,15 @@ class AssessShelf(State):
 
     def next_state(self, state_complete):
         # Move to next state when there is a confirmed centroid for the item
-        if state_complete:
-            print("Assessment complete")
-            return 4  # DoGrip
-        else:
-            return 3  # Stay in AssessShelf
+        if state_complete == "Item found":
+            print("Assessment complete - item found")
+            return 0b01011110000000  # End
+        if state_complete == "Item not found":
+            print("Assessment complete - item not found")
+            return 0b01011100000000  # Go to work order management to update priority list
+        if state_complete == "Shelf not found":
+            print("Shelf not found")
+            return 0b01010000000000  # Rerun calibration
 
 
 class DoGrip(State):
@@ -211,10 +232,10 @@ class DoGrip(State):
         """
 
         print("Attempting grip")
-        
-        
+
+
         # Shelf E pick home
-        
+
         pick_home_pose_msg = PoseMessage()
         pick_home = Pose()
         pick_home.position.x = 0.05
@@ -227,10 +248,10 @@ class DoGrip(State):
 
         pick_home_pose_msg.pose = pick_home
         pick_home_pose_msg.incremental = False
-        
+
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
         rospy.sleep(10.0)
-        
+
 
         # Attempt grip
 
@@ -248,7 +269,7 @@ class DoGrip(State):
         rospy.sleep(10.0)
 
         # Lift 2cm
-        
+
         pose_msg = PoseMessage()
         pose_msg.pose.position.z = 0.02
         pose_msg.incremental = True
@@ -286,7 +307,7 @@ class SpinState(State):
 
         try:
             transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
-            
+
             sample_pose_stamped = PoseStamped()
             sample_pose_stamped.header.stamp = rospy.Time.now()
             sample_pose_stamped.pose.orientation.w = 1.0
@@ -299,7 +320,7 @@ class SpinState(State):
             rospy.sleep(1.0)
 
         return self.next_state(False)
-            
+
 
     def on_event(self, event):
         print("No on-event function for this state")
@@ -400,6 +421,7 @@ class TopicWriter:
         self.pub.publish(message)
 
 
+
 class StateSupervisor:
     """
     Governs transitions between states and acts as scope for all state objects
@@ -407,7 +429,7 @@ class StateSupervisor:
 
     def __init__(self):
 
-        self.status = 0
+        self.status = 0b00000000000000
         self.state_initialise = Initialise()
         self.state_calibrate = Calibrate()
         self.state_find_shelf = FindShelf()
@@ -424,20 +446,18 @@ class StateSupervisor:
         :return: None
         """
 
-        if self.status == 0:
+        if self.status == 0b00000000000000:
             self.status = self.state_initialise.run(pipeline_core)
-        if self.status == 1:
+        if self.status in (0b10010000000000, 0b01010000000000):
             self.status = self.state_calibrate.run(pipeline_core)
-        if self.status == 2:
+        if self.status in (0b10011000000000, 0b10011000000000):
             self.status = self.state_find_shelf.run(pipeline_core)
-        if self.status == 3:
+        if self.status in (0b01011000000000, 0b01111110110000, 0b01011111010000):
             self.status = self.state_assess_shelf.run(pipeline_core)
-        if self.status == 4:
+        if self.status == 0b01011110000000:
             self.status = self.state_do_grip.run(pipeline_core)
-        if self.status == 5:
-            print("Demo completed")
-        if self.status == 999:
-            self.status = self.state_spin.run(pipeline_core)
+        else:
+            print("End of pipeline code so far")
 
     def report_status(self):
         print("Current state: ", self.status)
@@ -452,6 +472,16 @@ class PipelineCore:
         # Initiate Pipeline Node:
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
+
+        # TODO: create the prioritised item list of dictionaries (from Tj's program)
+        # Imported from prioritise.py
+        self.all_items = all_items
+        self.item_profile = item_profiles
+        self.bin_profiles = bin_profiles
+        self.bin_contents = None # Might not need to be shared to all states
+        self.work_order = None # Might not need to be shared to all states.
+        self.work_order_prioritised = None
+        self.target_shelf = None
 
         # Initiate topics and services:
         # UR10 control:
