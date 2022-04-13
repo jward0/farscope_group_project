@@ -14,8 +14,7 @@
             "munchkin_white_hot_duck_bath_toy"
         ],
         "bin_D": [
-            "first_years_take_and_toss_straw_cup",
-            "stanley_66_052"
+            "crayola_64_ct"
         ],
         "bin_E": [
             "expo_dry_erase_board_eraser"
@@ -42,7 +41,8 @@
         ],
         "bin_K": [
             "kyjen_squeakin_eggs_plush_puppies",
-            "crayola_64_ct",
+            "first_years_take_and_toss_straw_cup",
+            "stanley_66_052",
             "mommys_helper_outlet_plugs"
         ],
         "bin_L": [
@@ -53,6 +53,10 @@
         {
             "bin": "bin_E",
             "item": "expo_dry_erase_board_eraser"
+        },
+        {
+            "bin": "bin_D",
+            "item": "crayola_64_ct"
         }
     ]
 }

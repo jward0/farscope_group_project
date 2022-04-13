@@ -52,10 +52,10 @@ class Initialise(State):
 
         # TODO: Check prioritised item list has been populated
         # Function imported from priortise.py
-        json_object = import_json()
+        json_object = import_json('apc_pick_test.json')
         pipeline_core.bin_contents = json_object["bin_contents"]
         pipeline_core.work_order = json_object["work_order"]
-        work_order_prioritised = prioritise_items(bin_contents, work_order)
+        pipeline_core.work_order_prioritised = prioritise_items(bin_contents, work_order)
 
         # TODO: Test node communications
 
@@ -125,6 +125,9 @@ class FindShelf(State):
         :param pipeline_core: PipelineCore object
         :return: integer ID of next state
         """
+
+        pipeline_core.target_shelf = pipeline_core.work_order_prioritised[0]["bin"]
+
         print("Moving to shelf")
 
         # Shelf E home
@@ -289,6 +292,7 @@ class PipelineCore:
         self.bin_contents = None # Might not need to be shared to all states
         self.work_order = None # Might not need to be shared to all states.
         self.work_order_prioritised = None
+        self.target_shelf = None
 
         # Initiate topics and services:
         # UR10 control:
