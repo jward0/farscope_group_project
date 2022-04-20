@@ -95,12 +95,9 @@ class Calibrate(State):
         :return: integer ID of next state
         """
         print("Beginning calibration process")
-        # TODO: do we need vision calibration or UR10 calibration?
-        # TODO: Do vision system calibration
 
-        # (NOT FOR DEMO) Do vacuum calibration
-        # (NOT FOR DEMO) Do robot arm calibration - position relative to shelf
-        # (NOT FOR DEMO) Do any other calibration
+        # Do vacuum calibration
+        # pipeline_core.vacuumcalibration.call(1)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -131,28 +128,63 @@ class FindShelf(State):
         :param pipeline_core: PipelineCore object
         :return: integer ID of next state
         """
-
+        
+        # Go to robot home
+        home_pose_msg = PoseMessage()
+        home = Pose()
+        home.position.x = 0.05
+        home.position.y = 0.50
+        home.position.z = 0.42
+        home.orientation.x = 0.707100
+        home.orientation.y = 0.707100
+        home.orientation.z = 0.000000
+        home.orientation.w = 0.000000
+        
+        home_pose_msg.pose = home
+        home_pose_msg.incremental = False
+        pipeline_core.pose_publisher.write_topic(home_pose_msg)
+        rospy.sleep(5.0)
+        
+        # Read next shelf from work order
         pipeline_core.target_shelf = pipeline_core.work_order_prioritised[0]["bin"]
         print("New target shelf:")
         print(pipeline_core.target_shelf)
-
         print("Moving to shelf")
         
+        # Shelf pick home
+        pick_home_pose_msg = PoseMessage()
+        pick_home = Pose()
+        pick_home.position.x = 0.05 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+        pick_home.position.y = 0.50 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+        pick_home.position.z = 0.42 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
+        pick_home.orientation.x = 0.707100
+        pick_home.orientation.y = 0.707100
+        pick_home.orientation.z = 0.000000
+        pick_home.orientation.w = 0.000000
+        
+        pick_home_pose_msg.pose = pick_home
+        pick_home_pose_msg.incremental = False
+        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+        rospy.sleep(5.0)
+                
         # Shelf assess home
-        pose_msg = PoseMessage()
-        shelf_centre_pose = Pose()
-        shelf_centre_pose.position.x = 0 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
-        shelf_centre_pose.position.y = 0.4 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
-        shelf_centre_pose.position.z = 0.65 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
-        shelf_centre_pose.orientation.x = 0.6964
-        shelf_centre_pose.orientation.y = 0.6964
-        shelf_centre_pose.orientation.z = -0.1227
-        shelf_centre_pose.orientation.w = 0.1227
+        assess_home_pose_msg = PoseMessage()
+        assess_home = Pose()
+        assess_home.position.x = 0.0 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+        assess_home.position.y = 0.40 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+        assess_home.position.z = 0.65 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
+        assess_home.orientation.x = 0.696400
+        assess_home.orientation.y = 0.696400
+        assess_home.orientation.z = -0.122700
+        assess_home.orientation.w = 0.122700
 
-        # Go to shelf
-        pose_msg.pose = shelf_centre_pose
-        pose_msg.incremental = False
-        pipeline_core.pose_publisher.write_topic(pose_msg)
+        assess_home_pose_msg.pose = assess_home
+        assess_home_pose_msg.incremental = False
+        
+        print('Shelf assess home pose is:')
+        print(assess_home_pose_msg)
+        
+        pipeline_core.pose_publisher.write_topic(assess_home_pose_msg)
         rospy.sleep(10.0)
 
         state_complete = True
@@ -183,18 +215,20 @@ class AssessShelf(State):
         :return: integer ID of next state
         """
         print("Assessing shelf")
+        # Send request to vision node
         object_xyz = pipeline_core.get_object_centroid.call(pipeline_core.target_shelf)
-
+        
+        # Transform object coordinates to world frame pose
         transform = pipeline_core.tf_buffer.lookup_transform('world', 'camera', rospy.Time())
         object_pose = PoseStamped()
         object_pose.header.stamp = rospy.Time.now()
         object_pose.pose.position = object_xyz.object
 
         target_pose = tf2_geometry_msgs.do_transform_pose(object_pose, transform)
-        target_pose.pose.orientation.x = 0.7071
-        target_pose.pose.orientation.y = 0.7071
-        target_pose.pose.orientation.z = 0
-        target_pose.pose.orientation.w = 0
+        target_pose.pose.orientation.x = 0.707100
+        target_pose.pose.orientation.y = 0.707100
+        target_pose.pose.orientation.z = 0.000000
+        target_pose.pose.orientation.w = 0.000000
 
         print("Grip pose in world frame:")
         print(target_pose)
@@ -232,6 +266,8 @@ class DoGrip(State):
         """
 
         print("Attempting grip")
+        
+        # Shelf pick home
         pick_home_pose_msg = PoseMessage()
         pick_home = Pose()
         pick_home.position.x = 0.05 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
@@ -246,38 +282,34 @@ class DoGrip(State):
         pick_home_pose_msg.incremental = False
 
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
-        rospy.sleep(10.0)
+        rospy.sleep(7.0)
 
 
         # Attempt grip
-
         pose_msg = PoseMessage()
         pose_msg.pose = pipeline_core.stored_pose
-        # Translate the pose from periscope suction cup to end effector
-        # Suction cup is 0.65m from the end of the end effector
-        # Suction cup has 0.05m sag from the end effector due to pipe flex
-        pose_msg.pose.position.y -= 0.65
-        pose_msg.pose.position.z += 0.05
+        # Translate the pose from periscope suction cup to end effector              
+        pose_msg.pose.position.y -= 0.65  # Suction cup is 0.65m from the end of the end effector
+        pose_msg.pose.position.z += 0.05  # Suction cup has 0.05m sag from the end effector due to pipe flex
         pose_msg.incremental = False
-
+        
+        # Vacuum on
         pipeline_core.vacuumonoff.call(1)
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(10.0)
 
         # Lift 2cm
-
         pose_msg = PoseMessage()
         pose_msg.pose.position.z = 0.02
         pose_msg.incremental = True
-
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(2.0)
 
         # Return to pick home
-
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
-        rospy.sleep(10.0)
-
+        rospy.sleep(7.0)
+        
+        # Vacuum off
         pipeline_core.vacuumonoff.call(0)
 
         state_complete = True
@@ -360,94 +392,6 @@ class SpinState(State):
             return 5
         else:
             return 999  # Stay in SpinState
-
-
-class ServiceCaller:
-    """
-    Define service class
-    This class is defined for each ROS service interaction
-    The class can send a request to a service and process a response from a service
-    :attribute servicename: string
-        string name for the service as defined in the service definition
-    :attribute service_class: class
-        service class as defined in the service definition and imported from the relevent package
-    """
-
-    def __init__(self, servicename, service_class):
-        self.servicename = servicename
-        self.service_class = service_class
-        rospy.wait_for_service(servicename)
-        # rospy.loginfo("Connected to service:", servicename)
-
-    def call(self, req):
-        """
-        Sends a service request to the service attributed with this class
-        :param req: request to be sent to the class. The data type for this varies based on the service definition
-        :return: returns the response from the service
-        """
-        rospy.wait_for_service(self.servicename)
-        client = rospy.ServiceProxy(self.servicename, self.service_class)
-        response = client(req)
-        return response
-
-
-class TopicReader:
-    """
-    Define topicreaderclass to read data from published ROS topics
-    This class processes data from a ROS topic and returns it
-    :attribute: topic_name - string name of the topic to which data will be published
-    :attribute: data_class - data type / ROS data class for the published data
-    """
-
-    def __init__(self, topic_name, data_class):
-        self.var = None
-        self.topic_name = topic_name
-        self.data_class = data_class
-        rospy.Subscriber(self.topic_name, self.data_class, self.callback)
-        rospy.sleep(1)
-        rospy.loginfo("Reading topic {}...the following data has been read: {}".format(topic_name, self.var))
-
-    def callback(self, data):
-        """
-        Callback function - this is called automatically from the readtopic() function below
-        Sets the self.var variable to the data from the topic
-        :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
-        """
-        self.var = data
-        print(data)
-
-    def read_topic(self):
-        """
-        :return: returns the data read from the topic
-        """
-        rospy.Subscriber(self.topic_name, self.data_class, self.callback)
-        rospy.sleep(1)
-
-        return self.var
-
-
-class TopicWriter:
-    """
-    Define topicreader class to read data from published ROS topics
-    This class processes data from a ROS topic and returns it
-    :attribute: readname: name of the topic to subscribe and read from. Default to "none" if publishing only
-    :attribute: writename: name of the topic to publish and write to. Default to "none" if subscribing only
-    :attribute: read_data_class: data
-    """
-
-    def __init__(self, topic_name, data_class):
-        self.var = None
-        self.topic_name = topic_name
-        self.data_class = data_class
-        self.pub = rospy.Publisher(topic_name, self.data_class, queue_size=10)
-
-    def write_topic(self, message):
-        """
-        Write to the topic that has been created
-        :param message: Input data to be published to this topic
-        """
-        self.pub.publish(message)
-
 
 
 class StateSupervisor:

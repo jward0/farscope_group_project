@@ -51,12 +51,12 @@
     },
     "work_order": [
         {
-            "bin": "bin_E",
+            "bin": "bin_F",
             "item": "expo_dry_erase_board_eraser"
         },
         {
-            "bin": "bin_D",
-            "item": "crayola_64_ct"
+            "bin": "bin_B",
+            "item": "highland_6539_self_stick_notes"
         }
     ]
 }

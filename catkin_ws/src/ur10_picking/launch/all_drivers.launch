@@ -13,7 +13,7 @@
 
 	<node name="pipeline" pkg="ur10_picking" type="pipeline.py" output="screen"/>
 	<node name="moveit_interface" pkg="ur10_picking" type="ur10_motion_interface.py" output="log"/>
-	<node name="vision_server" pkg="ur10_picking" type="vision_ros.py" output="log"/>
+	<node name="vision_server" pkg="ur10_picking" type="vision_ros.py" output="screen"/>
 
 	<node pkg="tf2_ros" type="static_transform_publisher" name="camera_frame_broadcaster"    args="0.57  0.00  -0.03  0 0.1305 0 0.9914 ee_link camera" />
 	<node pkg="tf2_ros" type="static_transform_publisher" name="ee_link_aligned_broadcaster" args="0     0      0     0.7071 0.7071 0 0 ee_link ee_link_aligned" />

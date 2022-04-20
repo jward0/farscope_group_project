@@ -209,18 +209,18 @@ def get_shelf(shelf, color, depth, corners, ids):
     """
     mask = np.zeros(color.shape, np.uint8)
     # Define dictionary containing the arucoIDs for each bin
-    bin_markers = {"bin_A": [],
-                   "bin_B": [],
-                   "bin_C": [],
-                   "bin_D": [4, 0, 5, 2],
-                   "bin_E": [0, 1, 2, 3],
-                   "bin_F": [],
-                   "bin_G": [],
-                   "bin_H": [],
-                   "bin_I": [],
-                   "bin_J": [],
-                   "bin_K": [],
-                   "bin_L": []
+    bin_markers = {"bin_A": [0,1,4,5],
+                   "bin_B": [1,2,5,6],
+                   "bin_C": [2,3,6,7],
+                   "bin_D": [8,9,12,13],
+                   "bin_E": [9,10,13,14],
+                   "bin_F": [10,11,14,15],
+                   "bin_G": [16,17,20,21],
+                   "bin_H": [17,18,21,22],
+                   "bin_I": [18,19,22,23],
+                   "bin_J": [24,25,28,29],
+                   "bin_K": [25,26,29,30],
+                   "bin_L": [26,27,30,31]
                  }
     arucoIDs = bin_markers[shelf]
                 
@@ -240,14 +240,14 @@ def get_shelf(shelf, color, depth, corners, ids):
 			# ArUco marker
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-            if markerID == arucoIDs[0]:
-                markerCenters[markerID] = [bottomRight[0], bottomRight[1]]
-            if markerID == arucoIDs[1]:
-                markerCenters[markerID] = [bottomLeft[0], bottomLeft[1]]
-            if markerID == arucoIDs[2]:
-                markerCenters[markerID] = [topRight[0], topRight[1]]
             if markerID == arucoIDs[3]:
-                markerCenters[markerID] = [topLeft[0], topLeft[1]]
+                markerCenters[0] = [bottomRight[0], bottomRight[1]]
+            if markerID == arucoIDs[2]:
+                markerCenters[1] = [bottomLeft[0], bottomLeft[1]]
+            if markerID == arucoIDs[1]:
+                markerCenters[2] = [topRight[0], topRight[1]]
+            if markerID == arucoIDs[0]:
+                markerCenters[3] = [topLeft[0], topLeft[1]]
 
             cv2.circle(color, (cX, cY), 4, (0, 0, 255), -1)
             
