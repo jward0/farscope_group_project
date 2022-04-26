@@ -108,7 +108,7 @@ class Calibrate(State):
     def next_state(self, state_complete):
 
         if state_complete:
-            print("Calibration complete")
+            print("Calibration complete. State complete.")
             return 0b10011000000000  # Move to FindShelf
         else:
             return 0b10010000000000  # Stay in Calibration
@@ -130,6 +130,7 @@ class FindShelf(State):
         """
         
         # Go to robot home
+        print("Returning to home")
         home_pose_msg = PoseMessage()
         home = Pose()
         home.position.x = 0.05
@@ -196,7 +197,7 @@ class FindShelf(State):
     def next_state(self, state_complete):
 
         if state_complete:
-            print("Shelf found")
+            print("Shelf found. State complete.")
             return 0b01011000000000  # Move to AssessShelf
         else:
             return 0b10011000000000  # Stay in FindShelf
@@ -223,49 +224,6 @@ class AssessShelf(State):
         object_pose = PoseStamped()
         object_pose.header.stamp = rospy.Time.now()
         object_pose.pose.position = object_xyz.object
-
-        target_pose = tf2_geometry_msgs.do_transform_pose(object_pose, transform)
-        target_pose.pose.orientation.x = 0.707100
-        target_pose.pose.orientation.y = 0.707100
-        target_pose.pose.orientation.z = 0.000000
-        target_pose.pose.orientation.w = 0.000000
-
-        print("Grip pose in world frame:")
-        print(target_pose)
-
-        pipeline_core.stored_pose = target_pose.pose
-
-        state_complete = "Item found"
-        return self.next_state(state_complete)
-
-    def on_event(self, event):
-        print("No on-event function for this state")
-
-    def next_state(self, state_complete):
-        # Move to next state when there is a confirmed centroid for the item
-        if state_complete == "Item found":
-            print("Assessment complete - item found")
-            return 0b01011110000000  # DoGrip
-        if state_complete == "Item not found":
-            print("Assessment complete - item not found")
-            return 0b01011100000000  # Go to work order management to update priority list
-        if state_complete == "Shelf not found":
-            print("Shelf not found")
-            return 0b01010000000000  # Rerun calibration
-
-
-class DoGrip(State):
-    """
-    Do grip
-    """
-
-    def run(self, pipeline_core):
-        """
-        :param pipeline_core: PipelineCore object
-        :return: integer ID of next state
-        """
-
-        print("Attempting grip")
         
         # Shelf pick home
         pick_home_pose_msg = PoseMessage()
@@ -283,8 +241,74 @@ class DoGrip(State):
 
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
         rospy.sleep(7.0)
+        
+        # Check for common depth camera error - if depth out of range (>0.65) move on to next item
+        if object_pose.pose.position.x > 0.65 or object_pose.pose.position.x == 0.0:
+            state_complete = "Item not found"
+            pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"])
+            return self.next_state(state_complete)
+        else:
+            state_complete = "Item found"
+
+        target_pose = tf2_geometry_msgs.do_transform_pose(object_pose, transform)
+        target_pose.pose.orientation.x = 0.707100
+        target_pose.pose.orientation.y = 0.707100
+        target_pose.pose.orientation.z = 0.000000
+        target_pose.pose.orientation.w = 0.000000
+
+        print("Grip pose in world frame:")
+        print(target_pose)
+
+        pipeline_core.stored_pose = target_pose.pose
+ 
+        return self.next_state(state_complete)
+
+    def on_event(self, event):
+        print("No on-event function for this state")
+
+    def next_state(self, state_complete):
+        # Move to next state when there is a confirmed centroid for the item
+        if state_complete == "Item found":
+            print("Assessment complete - item found. State complete.")
+            return 0b01011110000000  # DoGrip
+        if state_complete == "Item not found":
+            print("Assessment complete - item not found. State complete.")
+            return 0b01011100000000  # Go to work order management to update priority list
+        if state_complete == "Shelf not found":
+            print("Shelf not found")
+            return 0b01010000000000  # Rerun calibration
 
 
+class DoGrip(State):
+    """
+    Do grip
+    """
+
+    def run(self, pipeline_core):
+        """
+        :param pipeline_core: PipelineCore object
+        :return: integer ID of next state
+        """
+
+        # Shelf pick home
+        pick_home_pose_msg = PoseMessage()
+        pick_home = Pose()
+        pick_home.position.x = 0.05 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+        pick_home.position.y = 0.5 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+        pick_home.position.z = 0.42 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
+        pick_home.orientation.x = 0.7071
+        pick_home.orientation.y = 0.7071
+        pick_home.orientation.z = 0
+        pick_home.orientation.w = 0
+        
+        pick_home_pose_msg.pose = pick_home
+        pick_home_pose_msg.incremental = False
+
+        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+        rospy.sleep(7.0)
+
+        print("Attempting grip")
+        
         # Attempt grip
         pose_msg = PoseMessage()
         pose_msg.pose = pipeline_core.stored_pose
@@ -294,23 +318,27 @@ class DoGrip(State):
         pose_msg.incremental = False
         
         # Vacuum on
-        pipeline_core.vacuumonoff.call(1)
+        if pipeline_core.vacuumonoff.call(1):
+            print("Vacuum on")
+        
+        # Go to target
         pipeline_core.pose_publisher.write_topic(pose_msg)
-        rospy.sleep(10.0)
+        rospy.sleep(5.0)
 
-        # Lift 2cm
+        # Lift 4cm
         pose_msg = PoseMessage()
-        pose_msg.pose.position.z = 0.02
+        pose_msg.pose.position.z = 0.04
         pose_msg.incremental = True
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(2.0)
 
         # Return to pick home
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
-        rospy.sleep(7.0)
+        rospy.sleep(5.0)
         
         # Vacuum off
-        pipeline_core.vacuumonoff.call(0)
+        if not pipeline_core.vacuumonoff.call(0):
+            print("Vaccuum off")
 
         state_complete = True
         return self.next_state(state_complete)
@@ -321,7 +349,7 @@ class DoGrip(State):
     def next_state(self, state_complete):
 
         if state_complete:
-            print("Grip attempt finished")
+            print("Grip attempt finished. State complete.")
             return 0b01011110101010 # Go to Work Order Management
         else:
             return 0b01011110000000 # Stay in DoGrip
@@ -353,7 +381,7 @@ class WorkOrderManagement(State):
     def next_state(self, state_complete):
 
         if state_complete:
-            print("Work order updated")
+            print("Work order updated. State complete.")
             return 0b10011000000000 # Back to FindShelf
         else:
             return 5 # Complete
@@ -433,6 +461,7 @@ class StateSupervisor:
             self.status = self.state_work_order_management.run(pipeline_core)
         else:
             print("End of pipeline code so far")
+            print(pipeline_core.skipped_items)
 
     def report_status(self):
         print("Current state: ", self.status)
@@ -457,6 +486,8 @@ class PipelineCore:
         self.work_order = None # Might not need to be shared to all states.
         self.work_order_prioritised = None
         self.target_shelf = None
+        self.skipped_items = []
+        self.picked_items = []
 
         # Initiate topics and services:
         # UR10 control:

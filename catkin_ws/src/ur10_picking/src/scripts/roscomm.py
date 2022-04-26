@@ -52,7 +52,6 @@ class TopicReader:
         :param data: input autofilled through the rospy.Subscriber function in the readtopic() function below
         """
         self.var = data
-        print(data)
 
     def read_topic(self):
         """

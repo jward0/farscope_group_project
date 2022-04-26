@@ -240,13 +240,13 @@ def get_shelf(shelf, color, depth, corners, ids):
 			# ArUco marker
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-            if markerID == arucoIDs[3]:
-                markerCenters[0] = [bottomRight[0], bottomRight[1]]
-            if markerID == arucoIDs[2]:
-                markerCenters[1] = [bottomLeft[0], bottomLeft[1]]
-            if markerID == arucoIDs[1]:
-                markerCenters[2] = [topRight[0], topRight[1]]
             if markerID == arucoIDs[0]:
+                markerCenters[0] = [bottomRight[0], bottomRight[1]]
+            if markerID == arucoIDs[1]:
+                markerCenters[1] = [bottomLeft[0], bottomLeft[1]]
+            if markerID == arucoIDs[2]:
+                markerCenters[2] = [topRight[0], topRight[1]]
+            if markerID == arucoIDs[3]:
                 markerCenters[3] = [topLeft[0], topLeft[1]]
 
             cv2.circle(color, (cX, cY), 4, (0, 0, 255), -1)
