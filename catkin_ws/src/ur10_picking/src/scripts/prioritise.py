@@ -65,9 +65,9 @@ bin_profiles = {"bin_A": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x":
                 "bin_G": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.32}},
                 "bin_H": {"location_score": 3/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.32}},
                 "bin_I": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.32}},
-                "bin_J": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": 0.64}},
-                "bin_K": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": 0.64}},
-                "bin_L": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": 0.64}}
+                "bin_J": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.64}},
+                "bin_K": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.64}},
+                "bin_L": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.64}}
                 }
 
 

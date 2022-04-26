@@ -96,14 +96,9 @@ class MoveitInterface:
         Also publishes to tf2 as a frame
         :return: None
         """
-    
-        # joint_states_temp = self.move_group.get_current_joint_values()
-        # print("++++++++++++++++++++++++++++++++++++")
-        # print(joint_states_temp)
-        # print("++++++++++++++++++++++++++++++++++++")
+
         pose = self.move_group.get_current_pose().pose
         self.pose_talker.send(pose)
-        print(pose)     
         t = TransformStamped()
         t.header.stamp = rospy.Time.now()
         t.header.frame_id = "world"
