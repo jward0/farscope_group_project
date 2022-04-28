@@ -171,10 +171,14 @@ class FindShelf(State):
         assess_home.position.x = 0.0 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
         assess_home.position.y = 0.40 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
         assess_home.position.z = 0.65 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
-        assess_home.orientation.x = 0.696400
-        assess_home.orientation.y = 0.696400
-        assess_home.orientation.z = -0.122700
-        assess_home.orientation.w = 0.122700
+        # assess_home.orientation.x = 0.696400
+        # assess_home.orientation.y = 0.696400
+        # assess_home.orientation.z = -0.122700
+        # assess_home.orientation.w = 0.122700
+        assess_home.orientation.x = 0.69
+        assess_home.orientation.y = 0.69
+        assess_home.orientation.z = -0.12
+        assess_home.orientation.w = 0.12
 
         assess_home_pose_msg.pose = assess_home
         assess_home_pose_msg.incremental = False
@@ -248,6 +252,22 @@ class AssessShelf(State):
         elif object_pose.pose.position.x == 0.0:
             state_complete = "Item not found"
             pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n")
+            # Shelf pick home
+            pick_home_pose_msg = PoseMessage()
+            pick_home = Pose()
+            pick_home.position.x = 0.05 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
+            pick_home.position.y = 0.5 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
+            pick_home.position.z = 0.42 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
+            pick_home.orientation.x = 0.7071
+            pick_home.orientation.y = 0.7071
+            pick_home.orientation.z = 0
+            pick_home.orientation.w = 0
+            
+            pick_home_pose_msg.pose = pick_home
+            pick_home_pose_msg.incremental = False
+
+            pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+            rospy.sleep(7.0)
             return self.next_state(state_complete)
         else:
             state_complete = "Item found" 
@@ -372,7 +392,7 @@ class DoGrip(State):
         # Vacuum off
         if not pipeline_core.vacuumonoff.call(0):
             print("Vaccuum off")
-        rospy.sleep(5.0)
+        rospy.sleep(7.0)
         
         # Return to pick home
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)

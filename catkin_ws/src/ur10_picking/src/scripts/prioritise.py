@@ -56,18 +56,19 @@ item_profiles = {"feline_greenies_dental_treats": {"hookability": 1, "suckabilit
                  }
 # z diff is ~32cm
 # y diff is ~27cm
-bin_profiles = {"bin_A": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": 0.32}},
-                "bin_B": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": 0.32}},
-                "bin_C": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": 0.32}},
-                "bin_D": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": 0.00}},
-                "bin_E": {"location_score": 3/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": 0.00}},
-                "bin_F": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": 0.00}},
-                "bin_G": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.32}},
-                "bin_H": {"location_score": 3/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.32}},
-                "bin_I": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.32}},
-                "bin_J": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.64}},
-                "bin_K": {"location_score": 2/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.64}},
-                "bin_L": {"location_score": 1/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.64}}
+# Fixed to prioritise shelves we can actually pick
+bin_profiles = {"bin_A": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": 0.32}},
+                "bin_B": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": 0.32}},
+                "bin_C": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": 0.32}},
+                "bin_D": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": 0.00}},
+                "bin_E": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": 0.00}},
+                "bin_F": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": 0.00}},
+                "bin_G": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.32}},
+                "bin_H": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.32}},
+                "bin_I": {"location_score": 4/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.32}},
+                "bin_J": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": -0.27, "z": -0.64}},
+                "bin_K": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": 0.00, "z": -0.64}},
+                "bin_L": {"location_score": 0/4, "shelf_offset": {"y": 0.0, "x": 0.27, "z": -0.64}}
                 }
 
 

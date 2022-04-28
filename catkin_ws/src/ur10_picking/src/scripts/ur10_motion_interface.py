@@ -70,8 +70,8 @@ class MoveitInterface:
             pose = pose_message.pose
 
         self.move_group.set_pose_target(pose)
-        self.move_group.set_goal_orientation_tolerance(0.05)
-        self.move_group.set_goal_position_tolerance(0.01)
+        self.move_group.set_planning_time(5.0)
+        self.move_group.set_num_planning_attempts(5)
         self.move_group.go(wait=True)
         self.move_group.stop()
         self.move_group.clear_pose_targets()
