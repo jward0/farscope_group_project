@@ -51,36 +51,8 @@
     },
     "work_order": [ 
         {
-            "bin": "bin_F",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_A",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_I",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_C",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_B",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_H",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
             "bin": "bin_E",
-            "item": "expo_dry_erase_board_eraser"
-        },
-        {
-            "bin": "bin_D",
-            "item": "expo_dry_erase_board_eraser"
+            "item": "kyjen_squeakin_eggs_plush_puppies"
         }
     ]
 }

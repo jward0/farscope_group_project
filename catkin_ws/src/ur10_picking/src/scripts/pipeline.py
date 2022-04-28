@@ -9,6 +9,7 @@ from std_msgs.msg import Bool
 from ur10_picking.msg import PoseMessage
 from ur10_picking.srv import *
 from prioritise import *
+from pickingreport import writereport
 
 import tf2_ros
 import tf2_geometry_msgs
@@ -54,17 +55,12 @@ class Initialise(State):
         """
         print("Initialising the system and prioritising items")
 
-        # TODO: Check arm has iniitiated and is in shelf home
-
-        # TODO: Check prioritised item list has been populated
         # Function imported from priortise.py
         json_object = import_json('/home/farscope/farscope_group_project/catkin_ws/src/ur10_picking/src/scripts/apc_pick_test.json')
         pipeline_core.bin_contents = json_object["bin_contents"]
         pipeline_core.work_order = json_object["work_order"]
         pipeline_core.work_order_prioritised = prioritise_items(pipeline_core.bin_contents, pipeline_core.work_order)
-
-        # TODO: Test node communications
-
+        
         state_complete = True
         return self.next_state(state_complete)
 
@@ -97,7 +93,8 @@ class Calibrate(State):
         print("Beginning calibration process")
 
         # Do vacuum calibration
-        # pipeline_core.vacuumcalibration.call(1)
+        pipeline_core.vacuumcalibration.call(1)
+        rospy.sleep(7.0)
 
         state_complete = True
         return self.next_state(state_complete)
@@ -245,7 +242,7 @@ class AssessShelf(State):
         # Check for common depth camera error - if depth out of range (>0.65) move on to next item
         if object_pose.pose.position.x > 0.65 or object_pose.pose.position.x == 0.0:
             state_complete = "Item not found"
-            pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"])
+            pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n")
             return self.next_state(state_complete)
         else:
             state_complete = "Item found"
@@ -304,9 +301,6 @@ class DoGrip(State):
         pick_home_pose_msg.pose = pick_home
         pick_home_pose_msg.incremental = False
 
-        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
-        rospy.sleep(7.0)
-
         print("Attempting grip")
         
         # Attempt grip
@@ -331,14 +325,31 @@ class DoGrip(State):
         pose_msg.incremental = True
         pipeline_core.pose_publisher.write_topic(pose_msg)
         rospy.sleep(2.0)
+        
+        # Check to see if item successfully picked
+        vacuum_status = data = pipeline_core.vacuumsucking.read_topic()
+        if not vacuum_status.data:
+            print("Failed to suck item - skipping to next item.")
+            pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n") 
+        
 
         # Return to pick home
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
         rospy.sleep(5.0)
         
+        # Check to see if item has been dropped
+        vacuum_status = data = pipeline_core.vacuumsucking.read_topic()
+        if not vacuum_status.data:
+            print("Item no longer sucked - item dropped.")
+            pipeline_core.dropped_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n") 
+        else:
+            print("Item succesfully picked")
+            pipeline_core.picked_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n")
+        
         # Vacuum off
         if not pipeline_core.vacuumonoff.call(0):
             print("Vaccuum off")
+        
 
         state_complete = True
         return self.next_state(state_complete)
@@ -460,8 +471,10 @@ class StateSupervisor:
         if self.status in (0b01011110101010, 0b01011100000000):
             self.status = self.state_work_order_management.run(pipeline_core)
         else:
-            print("End of pipeline code so far")
+            print("End of pipeline")
             print(pipeline_core.skipped_items)
+            print(pipeline_core.dropped_items)
+            writereport(pipeline_core.picked_items, pipeline_core.dropped_items, pipeline_core.skipped_items)
 
     def report_status(self):
         print("Current state: ", self.status)
@@ -476,8 +489,8 @@ class PipelineCore:
         # Initiate Pipeline Node:
         rospy.init_node("pipeline", anonymous=False)
         self.rate = rospy.Rate(10)
-
-        # TODO: create the prioritised item list of dictionaries (from Tj's program)
+        self.data = None
+        
         # Imported from prioritise.py
         self.all_items = all_items
         self.item_profile = item_profiles
@@ -488,6 +501,7 @@ class PipelineCore:
         self.target_shelf = None
         self.skipped_items = []
         self.picked_items = []
+        self.dropped_items = []
 
         # Initiate topics and services:
         # UR10 control:
@@ -504,14 +518,14 @@ class PipelineCore:
         # Vacuum control (commented out for UR10 testing purposes):
         self.vacuumonoff = ServiceCaller("vacuum_switch", vacuum_switch)
         self.vacuumcalibration = ServiceCaller("vacuum_calibration", vacuum_calibration)
-        self.vacuumsucking = TopicReader("vacuum_pressure", Bool)
-
+        self.vacuumsucking = TopicReader("vacuum_status", Bool)
+        
         # Scratch space for pose logging between states:
         self.stored_pose = Pose()
-
-        # Gripper topics and services:
-        # (NOT FOR DEMO) Add the gripper topics and services (limit switches arduino node)
-
+    
+    def callbacktest(data):
+        self.data = data.data
+       
 
 def run_pipeline():
     """

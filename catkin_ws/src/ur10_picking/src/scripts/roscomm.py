@@ -59,8 +59,8 @@ class TopicReader:
         """
         rospy.Subscriber(self.topic_name, self.data_class, self.callback)
         rospy.sleep(1)
-
         return self.var
+  
 
 
 class TopicWriter:

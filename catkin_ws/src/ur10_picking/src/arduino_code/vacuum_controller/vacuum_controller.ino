@@ -149,7 +149,7 @@ void loop()
   msg.data = suck_status();
   vacuum_status.publish( &msg );
   nh.spinOnce();
-  delay(1000);
+  delay(100);
 }
 
 void vacuum(bool onoff) 
