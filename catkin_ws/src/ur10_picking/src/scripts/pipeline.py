@@ -239,13 +239,19 @@ class AssessShelf(State):
         pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
         rospy.sleep(7.0)
         
-        # Check for common depth camera error - if depth out of range (>0.65) move on to next item
-        if object_pose.pose.position.x > 0.65 or object_pose.pose.position.x == 0.0:
+        # Check for common vision camera error
+        # If depth out of range (>0.65)
+        if object_pose.pose.position.x > 0.65:
+            print("Depth information not found. Attempting pick at 0.55m depth")
+            object_pose.pose.position.x = 0.55           
+            state_complete = "Item found"   
+        elif object_pose.pose.position.x == 0.0:
             state_complete = "Item not found"
             pipeline_core.skipped_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n")
             return self.next_state(state_complete)
         else:
-            state_complete = "Item found"
+            state_complete = "Item found" 
+            
 
         target_pose = tf2_geometry_msgs.do_transform_pose(object_pose, transform)
         target_pose.pose.orientation.x = 0.707100
@@ -345,11 +351,32 @@ class DoGrip(State):
         else:
             print("Item succesfully picked")
             pipeline_core.picked_items.append(pipeline_core.work_order_prioritised[0]["item"]+"\n")
+            print("Moving to bin")
+            bin_home_pose_msg = PoseMessage()
+            bin_home = Pose()
+            bin_home.position.x = 0.06
+            bin_home.position.y = 0.45
+            bin_home.position.z = 0.16
+            bin_home.orientation.x = 0.696400
+            bin_home.orientation.y = 0.696400
+            bin_home.orientation.z = -0.122700
+            bin_home.orientation.w = 0.122700
+            
+            bin_home_pose_msg.pose = bin_home
+            bin_home_pose_msg.incremental = False
+            
+            pipeline_core.pose_publisher.write_topic(bin_home_pose_msg)
+            rospy.sleep(5.0)
+            
         
         # Vacuum off
         if not pipeline_core.vacuumonoff.call(0):
             print("Vaccuum off")
+        rospy.sleep(5.0)
         
+        # Return to pick home
+        pipeline_core.pose_publisher.write_topic(pick_home_pose_msg)
+        rospy.sleep(5.0)        
 
         state_complete = True
         return self.next_state(state_complete)
