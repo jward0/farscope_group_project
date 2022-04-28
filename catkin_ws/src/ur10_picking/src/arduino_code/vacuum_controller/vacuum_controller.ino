@@ -54,9 +54,9 @@ void cali_callback(const vacuum_calibration::Request & req, vacuum_calibration::
     baseline_pressure = bme.readPressure()/100.0;
     delay(1000);
     vacuum(0);
-    res.output = "vacuum calibration complete";
+    res.output = 1;
   } else {
-    res.output = "Error: calibration not completed try again"; }
+    res.output = 0; }
 }
 ros::ServiceServer<vacuum_calibration::Request, vacuum_calibration::Response> server_c("vacuum_calibration",&cali_callback);
 
@@ -68,13 +68,11 @@ void switch_callback(const vacuum_switch::Request & req, vacuum_switch::Response
   if (req.input == 1) {
     vacuum(1);
     delay(100);
-    res.output = "vac_on"; }
+    res.output = 1; }
   else if (req.input == 0) {
     vacuum(0);
     delay(100);
-    res.output = "vac_off"; }
-  else {
-    res.output = "ERROR: input must be 1 or 0 to turn the vacuum on and off respectively"; }
+    res.output = 0; }
 }
 ros::ServiceServer<vacuum_switch::Request, vacuum_switch::Response> server_s("vacuum_switch",&switch_callback);
 
@@ -151,7 +149,7 @@ void loop()
   msg.data = suck_status();
   vacuum_status.publish( &msg );
   nh.spinOnce();
-  delay(1000);
+  delay(100);
 }
 
 void vacuum(bool onoff) 

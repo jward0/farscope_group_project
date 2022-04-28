@@ -1,8 +1,11 @@
+#!/usr/bin/env python
+
 from ur10_picking.srv import detect_markers
 from ur10_picking.srv import detect_object
 from ur10_picking.msg import arucoMarker
 from ur10_picking.msg import arucoMarkerArray
 from geometry_msgs.msg import Point
+from PIL import Image as ImageDisplay
 
 import rospy
 
@@ -116,7 +119,8 @@ def handle_detect_markers(req):
             print(result_string)
             mark = arucoMarker()
             mark.markerID = markerID
-            mark.point = Point(result[0],-result[2],-result[1])
+            # mark.point = Point(result[0],result[2],-result[1])
+            mark.point = Point(result[2], result[0], -result[1])
             markers.append(mark)
 
     toReturn = arucoMarkerArray()
@@ -133,20 +137,28 @@ def handle_detect_objects(req):
     Returns:
         geometry_msgs/Point: The 3D point of the object relative to the camera
     """
-    object = Point(0,0,0)
-    frames = vision_core.pipeline.wait_for_frames()
-    aligned_frames = vision_core.align.process(frames)
-    aligned_depth_frame = aligned_frames.get_depth_frame()
-    color_frame = aligned_frames.get_color_frame()
     
-    for x in range(5):
-        vision_core.pipeline.wait_for_frames()
-
+    shelf = req.shelf
+    object = Point(0,0,0)
+    
+    for x in range(10):
+        frames = vision_core.pipeline.wait_for_frames()
+        
+    frames = vision_core.pipeline.wait_for_frames() # Receive frame data from camera
+    aligned_frames = vision_core.align.process(frames) # Align frames in line with the colour camera
+    aligned_depth_frame = aligned_frames.get_depth_frame() # rs2 function to retrieve the first depth frame (adds depth to video frames)
+    color_frame = aligned_frames.get_color_frame() # rs2 function to retrieve the first colour frame (adds colour to video frames)
+    
+  
     depth_image = np.asanyarray(aligned_depth_frame.get_data())
     color_image = np.asanyarray(color_frame.get_data())
 
     (corners, ids, rejected) = cv2.aruco.detectMarkers(color_image, vision_core.arucoDict, parameters=vision_core.arucoParmas)
-    shelf_image, shelf_image_depth = get_shelf(color_image, depth_image,corners, ids)
+    shelf_image, shelf_image_depth = get_shelf(shelf, color_image, depth_image,corners, ids)
+    
+    # Added for image
+    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(shelf_image_depth, alpha=0.1), cv2.COLORMAP_HSV)
+    
     maskedShelf, maskedShelf_mask = maskShelf(shelf_image)
 
     contours = findContours(maskedShelf_mask, 1)
@@ -155,14 +167,34 @@ def handle_detect_objects(req):
             rect = cv2.boundingRect(c)
             x,y,w,h = rect
             depthLevel = getDepthOfRect(depth_image,rect)
-            coords = getDepth([x+w/2, w+h/2], depthLevel, aligned_depth_frame)
-            print("Detected Objects")
-            print(coords)
-            object = Point(coords[0], coords[1], coords[2])
+            print("Input from getDepth:")
+            print(x+w/2)
+            print(y+h/2)
+            print("Output from getDepth:")
+            coords = getDepth([x+w/2, y+h/2], depthLevel, aligned_depth_frame)
+            # object = Point(coords[0], coords[2], -coords[1])
+            object = Point(coords[2], coords[0], coords[1])
+            print("Detected Objects from vision_ros:")
+            print(object)
+            
+    # Take an image using OpenCV of what the camera is seeing at this pick
+            comx, comy = c.mean(axis=0)[0]
+            cv2.rectangle(color_image, rect, (0,0,255),4)
+            cv2.putText(color_image, str(object), (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)  
+            cv2.circle(color_image, (int(comx),int(comy)), 4, (0,255,0), -1)
+            cv2.circle(color_image, (int(x+w/2),int(y+h/2)), 4, (0,0,255), -1)
+            cv2.drawContours(color_image, c, -1, (255, 0, 0), 4)
     
+    com = np.hstack((color_image, maskedShelf))
+    com = np.hstack((com, depth_colormap))
+    cv2.imwrite('/home/farscope/Desktop/camera_see.jpg',com)
+    im = ImageDisplay.open(r"/home/farscope/Desktop/camera_see.jpg")
+    im.show()
+    
+            
     return object
 
-def get_shelf(color, depth, corners, ids):
+def get_shelf(shelf, color, depth, corners, ids):
     """Gets just the pixels of the shelf between the markers
 
     Args:
@@ -176,6 +208,22 @@ def get_shelf(color, depth, corners, ids):
         depth (int16 1*w*h array): A aruco cropped depth image array
     """
     mask = np.zeros(color.shape, np.uint8)
+    # Define dictionary containing the arucoIDs for each bin
+    bin_markers = {"bin_A": [0,1,4,5],
+                   "bin_B": [1,2,5,6],
+                   "bin_C": [2,3,6,7],
+                   "bin_D": [8,9,12,13],
+                   "bin_E": [9,10,13,14],
+                   "bin_F": [10,11,14,15],
+                   "bin_G": [16,17,20,21],
+                   "bin_H": [17,18,21,22],
+                   "bin_I": [18,19,22,23],
+                   "bin_J": [24,25,28,29],
+                   "bin_K": [25,26,29,30],
+                   "bin_L": [26,27,30,31]
+                 }
+    arucoIDs = bin_markers[shelf]
+                
     if len(corners) > 0:
 		# flatten the ArUco IDs list
         ids = ids.flatten()
@@ -192,14 +240,14 @@ def get_shelf(color, depth, corners, ids):
 			# ArUco marker
             cX = int((topLeft[0] + bottomRight[0]) / 2.0)
             cY = int((topLeft[1] + bottomRight[1]) / 2.0)
-            if markerID == 0:
-                markerCenters[markerID] = [bottomRight[0], bottomRight[1]]
-            if markerID == 1:
-                markerCenters[markerID] = [bottomLeft[0], bottomLeft[1]]
-            if markerID == 2:
-                markerCenters[markerID] = [topRight[0], topRight[1]]
-            if markerID == 3:
-                markerCenters[markerID] = [topLeft[0], topLeft[1]]
+            if markerID == arucoIDs[0]:
+                markerCenters[0] = [bottomRight[0], bottomRight[1]]
+            if markerID == arucoIDs[1]:
+                markerCenters[1] = [bottomLeft[0], bottomLeft[1]]
+            if markerID == arucoIDs[2]:
+                markerCenters[2] = [topRight[0], topRight[1]]
+            if markerID == arucoIDs[3]:
+                markerCenters[3] = [topLeft[0], topLeft[1]]
 
             cv2.circle(color, (cX, cY), 4, (0, 0, 255), -1)
             
@@ -283,6 +331,7 @@ def getDepth(point, depth, aligned_depth_frame):
     depth_intrinsic = aligned_depth_frame.profile.as_video_stream_profile().intrinsics
     result = rs.rs2_deproject_pixel_to_point(depth_intrinsic, [point[0], point[1]], depth)
     #result_string = "X: %f, Y: %f, Z: %f" % (result[0], result[1], result[2]) 
+    print(result)
 
     return result
 
