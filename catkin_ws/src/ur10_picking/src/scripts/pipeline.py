@@ -171,14 +171,10 @@ class FindShelf(State):
         assess_home.position.x = 0.0 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["x"]
         assess_home.position.y = 0.40 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["y"]
         assess_home.position.z = 0.65 + bin_profiles[pipeline_core.target_shelf]["shelf_offset"]["z"]
-        # assess_home.orientation.x = 0.696400
-        # assess_home.orientation.y = 0.696400
-        # assess_home.orientation.z = -0.122700
-        # assess_home.orientation.w = 0.122700
-        assess_home.orientation.x = 0.69
-        assess_home.orientation.y = 0.69
-        assess_home.orientation.z = -0.12
-        assess_home.orientation.w = 0.12
+        assess_home.orientation.x = 0.696400
+        assess_home.orientation.y = 0.696400
+        assess_home.orientation.z = -0.122700
+        assess_home.orientation.w = 0.122700
 
         assess_home_pose_msg.pose = assess_home
         assess_home_pose_msg.incremental = False
